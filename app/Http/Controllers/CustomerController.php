@@ -94,7 +94,7 @@ class CustomerController extends Controller
         $category = Category::with('rooms')->find($category_id);
 
         if (!$category) {
-            return response()->json(['message' => 'Category not found'], 404);
+            return response()->json(['message' => 'Category not found'], 200);
         }
 
         return response()->json([
@@ -126,7 +126,7 @@ class CustomerController extends Controller
         ])->find($room_id);
 
         if (!$room) {
-            return response()->json(['message' => 'room not found'], 404);
+            return response()->json(['message' => 'room not found'], 200);
         }
 
         return response()->json([
@@ -165,7 +165,7 @@ class CustomerController extends Controller
     //     ]);
 
     //     if (!$request->item_id && !$request->room_id) {
-    //         return response()->json(['message' => 'There must be a "room_id" or "item_id"'], 400);
+    //         return response()->json(['message' => 'There must be a "room_id" or "item_id"'], 200);
     //     }
 
     //     $favorite = Favorite::create([
@@ -187,7 +187,7 @@ class CustomerController extends Controller
         $customer = $user->customer;
 
         if (!$customer) {
-            return response()->json(['message' => 'Customer not found'], 404);
+            return response()->json(['message' => 'Customer not found'], 200);
         }
 
         if ($request->has('room_id')) {
@@ -223,7 +223,7 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Item added to favorites successfully'], 200);
             }
         } else {
-            return response()->json(['message' => 'No item or room provided'], 400);
+            return response()->json(['message' => 'No item or room provided'], 200);
         }
     }
 
@@ -276,7 +276,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $customerId = $user->customer->id;
@@ -297,17 +297,17 @@ class CustomerController extends Controller
     //     ]);
 
     //     if (empty($request->item_id) && empty($request->room_id)) {
-    //         return response()->json(['message' => '"room_id" or "item_id" one only'], 400);
+    //         return response()->json(['message' => '"room_id" or "item_id" one only'], 200);
     //     }
 
     //     if (!empty($request->item_id) && !empty($request->room_id)) {
-    //         return response()->json(['message' => 'should have "room_id" or "item_id"'], 400);
+    //         return response()->json(['message' => 'should have "room_id" or "item_id"'], 200);
     //     }
 
     //     $user = auth()->user();
 
     //     if (!$user || !$user->customer) {
-    //         return response()->json(['message' => 'login is required'], 401);
+    //         return response()->json(['message' => 'login is required'], 200);
     //     }
 
     //     $totalPrice = 0;
@@ -317,7 +317,7 @@ class CustomerController extends Controller
     //         $item = Item::find($request->item_id);
 
     //         if (!$item) {
-    //             return response()->json(['message' => 'item not found'], 404);
+    //             return response()->json(['message' => 'item not found'], 200);
     //         }
 
     //         $existingCartItem = Cart::where('customer_id', $user->customer->id)
@@ -361,7 +361,7 @@ class CustomerController extends Controller
     //         $room = Room::with('items')->find($request->room_id);
 
     //         if (!$room) {
-    //             return response()->json(['message' => 'room not found'], 404);
+    //             return response()->json(['message' => 'room not found'], 200);
     //         }
 
     //         $existingCartRoom = Cart::where('customer_id', $user->customer->id)
@@ -426,7 +426,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required!'], 401);
+            return response()->json(['message' => 'login is required!'], 200);
         }
 
         $customerId = $user->customer->id;
@@ -440,7 +440,7 @@ class CustomerController extends Controller
             ->first();
 
         if (!$customization) {
-            return response()->json(['message' => 'there is no customize'], 404);
+            return response()->json(['message' => 'there is no customize'], 200);
         }
 
         if ($request->action === 'accept') {
@@ -497,7 +497,7 @@ class CustomerController extends Controller
             $room = Room::find($roomId);
 
             if (!$room) {
-                return response()->json(['message' => 'room not found'], 404);
+                return response()->json(['message' => 'room not found'], 200);
             }
 
             $items = $room->items;
@@ -528,7 +528,7 @@ class CustomerController extends Controller
             $item = Item::find($itemId);
 
             if (!$item) {
-                return response()->json(['message' => 'item not found'], 404);
+                return response()->json(['message' => 'item not found'], 200);
             }
 
             if ($item->count >= $number) {
@@ -549,7 +549,7 @@ class CustomerController extends Controller
                 ], 200);
             }
         } else {
-            return response()->json(['message' => 'Please send either room_id or item_id.'], 400);
+            return response()->json(['message' => 'Please send either room_id or item_id.'], 200);
         }
     }
 
@@ -559,12 +559,12 @@ class CustomerController extends Controller
         $user = auth()->user()->customer;
 
         if (!$item) {
-            return response()->json(['message' => 'item not found'], 404);
+            return response()->json(['message' => 'item not found'], 200);
         }
 
         $itemDetail = $item->itemDetail;
         if (!$itemDetail) {
-            return response()->json(['message' => 'item detail not found'], 404);
+            return response()->json(['message' => 'item detail not found'], 200);
         }
 
         $existingCustomization = Customization::where('item_id', $item->id)
@@ -575,14 +575,14 @@ class CustomerController extends Controller
         $newWood = $request->wood_id ? Wood::find($request->wood_id) : null;
 
         if ($request->wood_id && !$newWood) {
-            return response()->json(['message' => 'wood type not found'], 404);
+            return response()->json(['message' => 'wood type not found'], 200);
         }
 
         $oldFabric = Fabric::find($itemDetail->fabric_id);
         $newFabric = $request->fabric_id ? Fabric::find($request->fabric_id) : null;
 
         if ($request->fabric_id && !$newFabric) {
-            return response()->json(['message' => 'fabric type not found'], 404);
+            return response()->json(['message' => 'fabric type not found'], 200);
         }
 
         $new_wood_Color = $request->wood_color ?? null;
@@ -664,7 +664,7 @@ class CustomerController extends Controller
     //     $user = auth()->user();
 
     //     if (!$user || !$user->customer) {
-    //         return response()->json(['message' => 'login is required'], 401);
+    //         return response()->json(['message' => 'login is required'], 200);
     //     }
 
     //     $customerId = $user->customer->id;
@@ -775,7 +775,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $request->validate([
@@ -784,7 +784,7 @@ class CustomerController extends Controller
         ]);
 
         if (!$request->item_id && !$request->room_id) {
-            return response()->json(['message' => 'يجب إرسال item_id أو room_id.'], 400);
+            return response()->json(['message' => 'يجب إرسال item_id أو room_id.'], 200);
         }
 
         $like = Like::where('customer_id', $user->customer->id)
@@ -812,7 +812,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $likes = Like::where('customer_id', $user->customer->id)->get();
@@ -855,7 +855,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $request->validate([
@@ -879,7 +879,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $complaints = Complaint::where('customer_id', $user->customer->id)->get();
@@ -895,7 +895,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'Customer must be logged in'], 401);
+            return response()->json(['message' => 'Customer must be logged in'], 200);
         }
 
         $request->validate([
@@ -1121,7 +1121,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'Customer not found'], 404);
+            return response()->json(['message' => 'Customer not found'], 200);
         }
 
         return response()->json([
@@ -1138,7 +1138,7 @@ class CustomerController extends Controller
         $customer = $user->customer;
 
         if (!$user || !$customer) {
-            return response()->json(['message' => 'User not authenticated or not a customer'], 401);
+            return response()->json(['message' => 'User not authenticated or not a customer'], 200);
         }
 
         $validator = Validator::make($request->all(), [
@@ -1170,7 +1170,7 @@ class CustomerController extends Controller
 
         if ($request->filled('current_password') && $request->filled('new_password')) {
             if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json(['message' => 'Current password is incorrect'], 403);
+                return response()->json(['message' => 'Current password is incorrect'], 200);
             }
             $user->password = Hash::make($request->new_password);
             $user->save();
@@ -1188,7 +1188,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
+            return response()->json(['message' => 'Unauthorized.'], 200);
         }
 
         $customer = $user->customer;
@@ -1196,7 +1196,7 @@ class CustomerController extends Controller
         $hasOrders = $customer->purchaseOrders()->exists();
 
         if ($hasOrders) {
-            return response()->json(['message' => 'Cannot delete account. Active purchase orders found.'], 403);
+            return response()->json(['message' => 'Cannot delete account. Active purchase orders found.'], 200);
         }
 
         if ($customer->profile_image && Storage::disk('public')->exists($customer->profile_image)) {
@@ -1357,7 +1357,7 @@ class CustomerController extends Controller
         ])->find($room_id);
 
         if (!$room) {
-            return response()->json(['message' => 'Room not found'], 404);
+            return response()->json(['message' => 'Room not found'], 200);
         }
 
         $isFavorite = false;
@@ -1472,7 +1472,7 @@ class CustomerController extends Controller
         $item = \App\Models\Item::with('itemDetail')->find($item_id);
 
         if (!$item) {
-            return response()->json(['message' => 'Item not found'], 404);
+            return response()->json(['message' => 'Item not found'], 200);
         }
 
         $likesCount = $item->likes()->count();
@@ -1531,7 +1531,7 @@ class CustomerController extends Controller
     //     $customer = $user->customer;
 
     //     if (!$customer) {
-    //         return response()->json(['message' => 'Customer not found'], 404);
+    //         return response()->json(['message' => 'Customer not found'], 200);
     //     }
 
     //     $request->validate([
@@ -1552,7 +1552,7 @@ class CustomerController extends Controller
     //             ->exists();
 
     //         if (!$roomOrderExists) {
-    //             return response()->json(['message' => 'The room is not part of your purchase history'], 403);
+    //             return response()->json(['message' => 'The room is not part of your purchase history'], 200);
     //         }
 
     //         $rating = new Rating();
@@ -1571,7 +1571,7 @@ class CustomerController extends Controller
     //             ->exists();
 
     //         if (!$itemOrderExists) {
-    //             return response()->json(['message' => 'The item is not part of your purchase history'], 403);
+    //             return response()->json(['message' => 'The item is not part of your purchase history'], 200);
     //         }
 
     //         $rating = new Rating();
@@ -1584,7 +1584,7 @@ class CustomerController extends Controller
     //         return response()->json(['message' => 'Feedback added successfully for item'], 201);
     //     }
 
-    //     return response()->json(['message' => 'You must provide either item_id or room_id'], 400);
+    //     return response()->json(['message' => 'You must provide either item_id or room_id'], 200);
     // }
 
     public function addFeedback(Request $request)
@@ -1593,7 +1593,7 @@ class CustomerController extends Controller
         $customer = $user->customer;
 
         if (!$customer) {
-            return response()->json(['message' => 'Customer not found'], 404);
+            return response()->json(['message' => 'Customer not found'], 200);
         }
 
         $request->validate([
@@ -1614,7 +1614,7 @@ class CustomerController extends Controller
                 ->exists();
 
             if (!$roomOrderExists) {
-                return response()->json(['message' => 'The room is not part of your purchase history'], 403);
+                return response()->json(['message' => 'The room is not part of your purchase history'], 200);
             }
 
             $existingRating = Rating::where('customer_id', $customer->id)
@@ -1622,7 +1622,7 @@ class CustomerController extends Controller
                 ->first();
 
             if ($existingRating) {
-                return response()->json(['message' => 'You have already provided feedback for this room'], 403);
+                return response()->json(['message' => 'You have already provided feedback for this room'], 200);
             }
 
             $rating = new Rating();
@@ -1641,7 +1641,7 @@ class CustomerController extends Controller
                 ->exists();
 
             if (!$itemOrderExists) {
-                return response()->json(['message' => 'The item is not part of your purchase history'], 403);
+                return response()->json(['message' => 'The item is not part of your purchase history'], 200);
             }
 
 
@@ -1650,7 +1650,7 @@ class CustomerController extends Controller
                 ->first();
 
             if ($existingRating) {
-                return response()->json(['message' => 'You have already provided feedback for this item'], 403);
+                return response()->json(['message' => 'You have already provided feedback for this item'], 200);
             }
 
             $rating = new Rating();
@@ -1663,7 +1663,7 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Feedback added successfully for item'], 201);
         }
 
-        return response()->json(['message' => 'You must provide either item_id or room_id'], 400);
+        return response()->json(['message' => 'You must provide either item_id or room_id'], 200);
     }
 
     public function getCustomerFavorites()
@@ -1671,7 +1671,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'Customer not found'], 401);
+            return response()->json(['message' => 'Customer not found'], 200);
         }
 
         $favorites = Favorite::where('customer_id', $user->customer->id)->get();
@@ -1702,7 +1702,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'User not found or not logged in'], 401);
+            return response()->json(['message' => 'User not found or not logged in'], 200);
         }
 
         $request->validate([
@@ -1711,7 +1711,7 @@ class CustomerController extends Controller
         ]);
 
         if (empty($request->item_id) && empty($request->room_id)) {
-            return response()->json(['message' => 'You must provide either item_id or room_id'], 400);
+            return response()->json(['message' => 'You must provide either item_id or room_id'], 200);
         }
 
         $customerId = $user->customer->id;
@@ -1722,7 +1722,7 @@ class CustomerController extends Controller
                 ->first();
 
             if (!$feedback) {
-                return response()->json(['message' => 'No feedback found for this room from the user'], 404);
+                return response()->json(['message' => 'No feedback found for this room from the user'], 200);
             }
 
             return response()->json([
@@ -1739,7 +1739,7 @@ class CustomerController extends Controller
                 ->first();
 
             if (!$feedback) {
-                return response()->json(['message' => 'No feedback found for this item from the user'], 404);
+                return response()->json(['message' => 'No feedback found for this item from the user'], 200);
             }
 
             return response()->json([
@@ -1757,7 +1757,7 @@ class CustomerController extends Controller
         $roomId = $request->input('room_id');
 
         if (empty($itemId) && empty($roomId)) {
-            return response()->json(['message' => 'You must provide either item_id or room_id'], 400);
+            return response()->json(['message' => 'You must provide either item_id or room_id'], 200);
         }
 
         $request->validate([
@@ -1804,13 +1804,13 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required!'], 401);
+            return response()->json(['message' => 'login is required!'], 200);
         }
 
         $item = Item::find($itemId);
 
         if (!$item) {
-            return response()->json(['message' => 'Item not found'], 404);
+            return response()->json(['message' => 'Item not found'], 200);
         }
 
         $customization = Customization::where('item_id', $itemId)
@@ -1825,7 +1825,7 @@ class CustomerController extends Controller
         } else {
             return response()->json([
                 'message' => 'No customization found for this item',
-            ], 404);
+            ], 200);
         }
     }
 
@@ -1833,7 +1833,7 @@ class CustomerController extends Controller
     {
         $user = auth()->user();
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required!'], 401);
+            return response()->json(['message' => 'login is required!'], 200);
         }
 
         $customerId = $user->customer->id;
@@ -1846,7 +1846,7 @@ class CustomerController extends Controller
         $room = Room::with('items')->find($roomId);
 
         if (!$room) {
-            return response()->json(['message' => 'Room not found'], 404);
+            return response()->json(['message' => 'Room not found'], 200);
         }
 
         $items = $room->items->map(function ($item) use ($roomCustomization) {
@@ -1874,11 +1874,11 @@ class CustomerController extends Controller
 
         $room = Room::find($roomId);
         if (!$room) {
-            return response()->json(['message' => 'Room not found'], 404);
+            return response()->json(['message' => 'Room not found'], 200);
         }
 
         if (!$request->has('items')) {
-            return response()->json(['message' => 'Items data is required'], 400);
+            return response()->json(['message' => 'Items data is required'], 200);
         }
 
         $itemsData = $request->input('items');
@@ -1897,7 +1897,7 @@ class CustomerController extends Controller
         foreach ($itemsData as $customizationData) {
             $item = Item::find($customizationData['item_id']);
             if (!$item) {
-                return response()->json(['message' => 'Item not found'], 404);
+                return response()->json(['message' => 'Item not found'], 200);
             }
 
             $finalPrice = $item->price;
@@ -1988,7 +1988,7 @@ class CustomerController extends Controller
 
     //     // التحقق من وجود تخصيص الغرفة
     //     if (!$roomCustomization) {
-    //         return response()->json(['message' => 'Room customization not found'], 404);
+    //         return response()->json(['message' => 'Room customization not found'], 200);
     //     }
 
     //     // جلب جميع عناصر الغرفة
@@ -2051,7 +2051,7 @@ class CustomerController extends Controller
         $baseCustomization = RoomCustomization::with('room.items')->find($roomCustomizationId);
 
         if (!$baseCustomization) {
-            return response()->json(['message' => 'Room customization not found'], 404);
+            return response()->json(['message' => 'Room customization not found'], 200);
         }
 
         $room = $baseCustomization->room;
@@ -2061,7 +2061,7 @@ class CustomerController extends Controller
             ->get();
 
         if ($roomCustomizations->isEmpty()) {
-            return response()->json(['message' => 'No customizations found for this room'], 404);
+            return response()->json(['message' => 'No customizations found for this room'], 200);
         }
 
         $customizationsData = $roomCustomizations->map(function ($customization) use ($room) {
@@ -2099,14 +2099,14 @@ class CustomerController extends Controller
 
 
     //     if (!$request->hasAny(['item_id', 'room_id', 'customization_id', 'room_customization_id'])) {
-    //         return response()->json(['message' => 'Invalid request. Missing item_id, room_id, customization_id, or room_customization_id'], 400);
+    //         return response()->json(['message' => 'Invalid request. Missing item_id, room_id, customization_id, or room_customization_id'], 200);
     //     }
 
 
 
     //     $count = (int) $request->input('count', 1);
     //     if ($count <= 0) {
-    //         return response()->json(['message' => 'Count must be greater than 0'], 400);
+    //         return response()->json(['message' => 'Count must be greater than 0'], 200);
     //     }
 
     //     $pricePerItem = 0;
@@ -2119,7 +2119,7 @@ class CustomerController extends Controller
     //     if ($itemId) {
     //         $item = Item::find($itemId);
     //         if (!$item) {
-    //             return response()->json(['message' => 'Item not found'], 404);
+    //             return response()->json(['message' => 'Item not found'], 200);
     //         }
 
     //         $pricePerItem = $item->price;
@@ -2127,7 +2127,7 @@ class CustomerController extends Controller
     //     } elseif ($roomId) {
     //         $room = Room::with('items')->find($roomId);
     //         if (!$room) {
-    //             return response()->json(['message' => 'Room not found'], 404);
+    //             return response()->json(['message' => 'Room not found'], 200);
     //         }
 
     //         $pricePerItem = $room->items->sum('price');
@@ -2135,7 +2135,7 @@ class CustomerController extends Controller
     //     } elseif ($customizationId) {
     //         $customization = Customization::find($customizationId);
     //         if (!$customization) {
-    //             return response()->json(['message' => 'Customization not found'], 404);
+    //             return response()->json(['message' => 'Customization not found'], 200);
     //         }
 
     //         $pricePerItem = $customization->final_price;
@@ -2145,7 +2145,7 @@ class CustomerController extends Controller
     //     } elseif ($roomCustomizationId) {
     //         $roomCustomization = RoomCustomization::with('customizationItems.item', 'room')->find($roomCustomizationId);
     //         if (!$roomCustomization) {
-    //             return response()->json(['message' => 'Room Customization not found'], 404);
+    //             return response()->json(['message' => 'Room Customization not found'], 200);
     //         }
 
 
@@ -2217,12 +2217,12 @@ class CustomerController extends Controller
         }
 
         if (!$isValid) {
-            return response()->json(['message' => 'Invalid request. Missing one of item_id, room_id, customization_id, or room_customization_id'], 400);
+            return response()->json(['message' => 'Invalid request. Missing one of item_id, room_id, customization_id, or room_customization_id'], 200);
         }
 
         $count = (int) $request->input('count', 1);
         if ($count <= 0) {
-            return response()->json(['message' => 'Count must be greater than 0'], 400);
+            return response()->json(['message' => 'Count must be greater than 0'], 200);
         }
 
         $itemId = $request->input('item_id');
@@ -2239,7 +2239,7 @@ class CustomerController extends Controller
 
         if ($itemId) {
             $item = Item::find($itemId);
-            if (!$item) return response()->json(['message' => 'Item not found'], 404);
+            if (!$item) return response()->json(['message' => 'Item not found'], 200);
 
             $availableCount = $item->count - $item->count_reserved;
             $pricePerItem = (float) $item->price;
@@ -2292,7 +2292,7 @@ class CustomerController extends Controller
             }
         } elseif ($roomId) {
             $room = Room::with('items')->find($roomId);
-            if (!$room) return response()->json(['message' => 'Room not found'], 404);
+            if (!$room) return response()->json(['message' => 'Room not found'], 200);
 
             $roomPricePerItem = 0.0;
             $roomTimePerItem = 0.0;
@@ -2367,7 +2367,7 @@ class CustomerController extends Controller
     //     $cartItems = Cart::where('customer_id', $customerId)->get();
 
     //     if ($cartItems->isEmpty()) {
-    //         return response()->json(['message' => 'Your cart is empty'], 400);
+    //         return response()->json(['message' => 'Your cart is empty'], 200);
     //     }
 
     //     // التحقق من خيار التوصيل
@@ -2667,7 +2667,7 @@ class CustomerController extends Controller
         $user = auth()->user();
 
         if (!$user || !$user->customer) {
-            return response()->json(['message' => 'login is required'], 401);
+            return response()->json(['message' => 'login is required'], 200);
         }
 
         $cartQuery = Cart::where('customer_id', $user->customer->id);
@@ -2693,17 +2693,17 @@ class CustomerController extends Controller
                 ->whereNull('room_id')
                 ->whereNull('customization_id');
         } else {
-            return response()->json(['message' => 'You must provide one of item_id, room_id, customization_id, or room_customization_id'], 400);
+            return response()->json(['message' => 'You must provide one of item_id, room_id, customization_id, or room_customization_id'], 200);
         }
 
         $cartItem = $cartQuery->first();
 
         if (!$cartItem) {
-            return response()->json(['message' => 'Item not found in cart'], 404);
+            return response()->json(['message' => 'Item not found in cart'], 200);
         }
 
         if ($cartItem->count < $request->count) {
-            return response()->json(['message' => 'Count you sent is bigger than count in cart'], 400);
+            return response()->json(['message' => 'Count you sent is bigger than count in cart'], 200);
         }
 
         $removalCount = $request->count;
@@ -2846,7 +2846,7 @@ class CustomerController extends Controller
         if (!$type) {
             return response()->json([
                 'message' => 'Type not found',
-            ], 404);
+            ], 200);
         }
 
         $items = Item::where('item_type_id', $typeId)->get();
@@ -2864,7 +2864,7 @@ class CustomerController extends Controller
         if (!$typeName || !is_string($typeName)) {
             return response()->json([
                 'message' => 'type_name is required and must be a string'
-            ], 422);
+            ], 200);
         }
 
         $types = ItemType::where('name', 'like', '%' . $typeName . '%')->get();
@@ -2872,7 +2872,7 @@ class CustomerController extends Controller
         if ($types->isEmpty()) {
             return response()->json([
                 'message' => 'Type not found'
-            ], 404);
+            ], 200);
         }
 
         $items = Item::whereIn('item_type_id', $types->pluck('id'))
@@ -2923,7 +2923,7 @@ class CustomerController extends Controller
     //     $types = ItemType::where('name', 'like', '%' . $request->type_name . '%')->get();
 
     //     if ($types->isEmpty()) {
-    //         return response()->json(['message' => 'Type not found'], 404);
+    //         return response()->json(['message' => 'Type not found'], 200);
     //     }
 
     //     // فلترة العناصر المرتبطة بالأنواع
@@ -2988,7 +2988,7 @@ class CustomerController extends Controller
         $types = ItemType::where('name', 'like', '%' . $request->type_name . '%')->get();
 
         if ($types->isEmpty()) {
-            return response()->json(['message' => 'Type not found'], 404);
+            return response()->json(['message' => 'Type not found'], 200);
         }
 
         $query = Item::select('items.*')
@@ -3051,7 +3051,7 @@ class CustomerController extends Controller
         $singleRoomId = $request->input('room_id');
 
         if (empty($itemIds) && empty($roomIds) && !$singleItemId && !$singleRoomId) {
-            return response()->json(['message' => 'Invalid request. Provide item_ids or room_ids or single item_id/room_id'], 400);
+            return response()->json(['message' => 'Invalid request. Provide item_ids or room_ids or single item_id/room_id'], 200);
         }
 
         if ($singleItemId) $itemIds[] = $singleItemId;

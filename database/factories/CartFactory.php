@@ -26,7 +26,7 @@ class CartFactory extends Factory
             'time' => 0,
             'price' => 0,
             'available_count_at_addition' => $this->faker->numberBetween(1, 20),
-            'reserved_at' => null,
+            'reserved_at' => $this->faker->dateTimeBetween('now', '+7 days'), 
         ];
     }
 }
