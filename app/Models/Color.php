@@ -11,6 +11,7 @@ class Color extends Model
 
     protected $fillable = [
         'fabric_id',
-        'wood_id'
+        'wood_id',
+        'name'
     ];
 }
