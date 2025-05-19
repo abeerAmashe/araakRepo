@@ -1469,11 +1469,6 @@ class CustomerController extends Controller
 
     public function getItemDetails($item_id)
     {
-        // $user = auth()->user();        
-        // $customer = $user->customer;        
-        // return $user;
-
-
         $item = \App\Models\Item::with('itemDetail')->find($item_id);
 
         if (!$item) {

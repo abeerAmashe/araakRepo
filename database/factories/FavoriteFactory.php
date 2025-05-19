@@ -2,22 +2,24 @@
 
 namespace Database\Factories;
 
-use App\Models\Favorite;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Customer;
 use App\Models\Item;
 use App\Models\Room;
-use App\Models\Customer; // Assuming you have a Customer model
-use Illuminate\Database\Eloquent\Factories\Factory;
 
 class FavoriteFactory extends Factory
 {
-    protected $model = Favorite::class;
+    protected $model = \App\Models\Favorite::class;
 
-    public function definition(): array
+    public function definition()
     {
+        $item = Item::inRandomOrder()->first() ?? Item::factory()->create();
+        $room = $item->room ?? Room::inRandomOrder()->first() ?? Room::factory()->create();
+
         return [
-            'customer_id' => Customer::inRandomOrder()->first()?->id ?? Customer::factory(), // Assuming you have a Customer factory
-            'item_id' => Item::inRandomOrder()->first()?->id ?? Item::factory(),
-            'room_id' => Room::inRandomOrder()->first()?->id ?? Room::factory(),
+            'customer_id' => Customer::inRandomOrder()->first()?->id ?? Customer::factory()->create()->id,
+            'item_id' => $item->id,
+            'room_id' => $room->id,
         ];
     }
 }

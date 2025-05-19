@@ -21,7 +21,6 @@ class CustomerFactory extends Factory
             'img3.JPG'
         ];
 
-        // اختيار صورة عشوائية من بين الصور المتوفرة
         $randomImage = $profileImages[array_rand($profileImages)];
 
         return [

@@ -4,43 +4,60 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Item;
-use App\Models\Favorite;
+use App\Models\ItemDetail;
+use App\Models\Wood;
+use App\Models\Fabric;
+use App\Models\Type;
 use App\Models\Like;
 use App\Models\Rating;
-use Illuminate\Support\Facades\DB;
+use App\Models\Customer;
 
 class ItemSeeder extends Seeder
 {
     public function run(): void
     {
-        // تعطيل قيود المفتاح الخارجي مؤقتًا لضمان القدرة على التفرغ بشكل صحيح
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        $woods = Wood::all();
+        $fabrics = Fabric::all();
+        $types = Type::all();
+        $customers = Customer::all();
 
-        // تأكد من مسح الجداول القديمة قبل إضافة بيانات جديدة (اختياري)
-        Item::truncate(); 
-        Favorite::truncate(); 
-        Like::truncate();
-        Rating::truncate();
-
-        // إعادة تفعيل القيود بعد الحذف
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-        // إنشاء 10 عناصر باستخدام الـ Factory
-        Item::factory()->count(10)->create()->each(function ($item) {
-            // إضافة بيانات العُملاء المفضلة (favorites) لعناصر معينة
-            Favorite::factory()->count(2)->create([
+        // إنشاء 10 عناصر
+        Item::factory(10)->create()->each(function ($item) use ($woods, $fabrics, $types, $customers) {
+            // إنشاء تفاصيل العنصر
+            ItemDetail::create([
                 'item_id' => $item->id,
+                'wood_id' => $woods->random()->id,
+                'fabric_id' => $fabrics->random()->id,
+                'wood_length' => rand(100, 300),
+                'wood_width' => rand(50, 150),
+                'wood_height' => rand(30, 120),
+                'fabric_dimension' => rand(100, 200),
+                'wood_color' => fake()->safeColorName(),
+                'fabric_color' => fake()->safeColorName(),
             ]);
 
-            // إضافة بيانات الإعجابات (likes) لعناصر معينة
-            Like::factory()->count(3)->create([
-                'item_id' => $item->id,
-            ]);
+            // إضافة لايكات وتقييمات واختيارات مفضلة
+            $randomCustomers = $customers->random(rand(1, 3));
+            foreach ($randomCustomers as $customer) {
+                Like::factory()->create([
+                    'customer_id' => $customer->id,
+                    'item_id' => $item->id,
+                    'room_id' => null,
+                ]);
 
-            // إضافة بيانات التقييمات (ratings) لعناصر معينة
-            Rating::factory()->count(5)->create([
-                'item_id' => $item->id,
-            ]);
+                Rating::factory()->create([
+                    'customer_id' => $customer->id,
+                    'item_id' => $item->id,
+                    'room_id' => null,
+                    'rate' => rand(1, 5),
+                    'feedback' => fake()->optional()->sentence(),
+                ]);
+
+                $customer->favorites()->create([
+                    'item_id' => $item->id,
+                    'room_id' => null,
+                ]);
+            }
         });
     }
 }

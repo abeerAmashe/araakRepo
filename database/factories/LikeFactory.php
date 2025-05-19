@@ -2,21 +2,20 @@
 
 namespace Database\Factories;
 
-use App\Models\Like;
-use App\Models\Customer;
-use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Customer;
+use App\Models\Item;
 
 class LikeFactory extends Factory
 {
-    protected $model = Like::class;
+    protected $model = \App\Models\Like::class;
 
-    public function definition(): array
+    public function definition()
     {
         return [
-            'customer_id' => Customer::inRandomOrder()->first()?->id ?? 1,
-            'item_id' => null,
-            'room_id' => Room::inRandomOrder()->first()?->id ?? null,
+            'customer_id' => Customer::factory(),
+            'item_id' => Item::factory(),
+            'room_id' => null, // not relevant here
         ];
     }
 }

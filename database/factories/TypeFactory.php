@@ -13,8 +13,21 @@ class TypeFactory extends Factory
 
     public function definition(): array
     {
+        $typeNames = [
+            'Single Chair',
+            'Small Sofa',
+            'Large Sofa',
+            'Side Table',
+            'Center Table',
+            'Bed',
+            'Wardrobe',
+            'Desk',
+            'Bookshelf',
+            'Wall Shelf',
+        ];
+
         return [
-            'name' => $this->faker->word(),  // ✅ تمت الإضافة
+            'name' => $this->faker->randomElement($typeNames),
             'wood_id' => Wood::factory(),
             'fabric_id' => Fabric::factory(),
         ];

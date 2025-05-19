@@ -2,23 +2,22 @@
 
 namespace Database\Factories;
 
-use App\Models\Rating;
-use App\Models\Customer;
-use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Customer;
+use App\Models\Item;
 
 class RatingFactory extends Factory
 {
-    protected $model = Rating::class;
+    protected $model = \App\Models\Rating::class;
 
-    public function definition(): array
+    public function definition()
     {
         return [
-            'customer_id' => Customer::inRandomOrder()->first()?->id ?? 1,
-            'room_id' => Room::inRandomOrder()->first()?->id ?? 1,
-            'item_id' => null, // حاليًا نركّز على الغرف فقط، ممكن نعدله لاحقًا للعناصر
+            'customer_id' => Customer::factory(),
+            'item_id' => Item::factory(),
+            'room_id' => null,
             'rate' => $this->faker->numberBetween(1, 5),
-            'feedback' => $this->faker->sentence(12),
+            'feedback' => $this->faker->optional()->sentence(),
         ];
     }
 }
