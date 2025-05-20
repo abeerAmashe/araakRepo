@@ -117,6 +117,7 @@ Route::get('/getItemsByType/{typeId}', [CustomerController::class, 'getItemsByTy
 
 
 
+Route::get('/discount/{id}', [CustomerController::class, 'showDiscountDetails']);
 
 
 //Ali

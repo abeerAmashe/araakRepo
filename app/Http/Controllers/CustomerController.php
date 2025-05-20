@@ -937,7 +937,7 @@ class CustomerController extends Controller
             return 1;
         }
     }
-
+//AAAA
     // public function getTrending()
     // {
 
@@ -1011,6 +1011,7 @@ class CustomerController extends Controller
                 $discountedPrice = $originalPrice
                     ? round($originalPrice * (1 - $discount->discount_percentage / 100), 2)
                     : null;
+                    $imageUrl = $discount->room?->image_url ?? $discount->item?->image_url ?? null;
 
                 return [
                     'id' => $discount->id,
@@ -1021,6 +1022,8 @@ class CustomerController extends Controller
                     'end_date' => $discount->end_date,
                     'original_price' => $originalPrice,
                     'discounted_price' => $discountedPrice,
+                    'image_url' => $imageUrl, 
+
                 ];
             });
 
@@ -3203,4 +3206,54 @@ class CustomerController extends Controller
             // 'deposit' => $depositAmount,
         ]);
     }
+
+
+    public function showDiscountDetails($id)
+{
+    $discount = Discount::with(['room.items', 'item'])->findOrFail($id);
+
+    // السعر الأصلي
+    $originalPrice = $discount->item
+        ? $discount->item->price
+        : ($discount->room ? $discount->room->price : 0);
+
+    // السعر بعد الخصم
+    $discountedPrice = $originalPrice - ($originalPrice * ($discount->discount_percentage / 100));
+
+    $details = [
+        'discount_percentage' => $discount->discount_percentage,
+        'start_date' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
+        'end_date' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
+        'original_price' => number_format($originalPrice, 2),
+        'discounted_price' => number_format($discountedPrice, 2),
+    ];
+
+    // إذا كان الخصم على غرفة
+    if ($discount->room) {
+        $details['room_id'] = $discount->room->id;
+        $details['room_name'] = $discount->room->name;
+        $details['room_image'] = $discount->room->image_url;
+
+        $details['room_items'] = $discount->room->items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'price' => number_format($item->price, 2),
+                'image_url' => $item->image_url,
+            ];
+        })->toArray();
+    }
+
+    // إذا كان الخصم على عنصر
+    if ($discount->item) {
+        $details['item_id'] = $discount->item->id;
+        $details['item_name'] = $discount->item->name;
+        $details['item_image'] = $discount->item->image_url;
+    }
+
+    return response()->json($details);
+}
+
+
+
 }

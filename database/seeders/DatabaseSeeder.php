@@ -58,7 +58,9 @@ class DatabaseSeeder extends Seeder
             ItemSeeder::class,
 
             FixRoomRelationsSeeder::class,
-            CartSeeder::class
+            CartSeeder::class,
+            DiscountSeeder::class,
+
         ]);
     }
 }
