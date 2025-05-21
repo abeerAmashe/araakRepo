@@ -699,66 +699,61 @@ class CustomerController extends Controller
     // }
 
     public function getCartDetails()
-    {
-        $customerId = auth()->user()->customer->id;
+{
+    $customerId = auth()->user()->customer->id;
 
-        $cartItems = \App\Models\Cart::with([
-            'item',
-            'room',
-        ])
-            ->where('customer_id', $customerId)
-            ->get();
+    $cartItems = \App\Models\Cart::with([
+        'item',
+        'room',
+    ])
+        ->where('customer_id', $customerId)
+        ->get();
 
-        $rooms = [];
-        $items = [];
-        $totalPrice = 0;
-        $totalTime = 0;
+    $rooms = [];
+    $items = [];
+    $totalPrice = 0;
+    $totalTime = 0;
 
-        foreach ($cartItems as $cart) {
-            $pricePerItem = $cart->price_per_item;
-            $timePerItem = $cart->time_per_item;
+    foreach ($cartItems as $cart) {
+        // تأكد من تحويل السعر والوقت إلى أرقام
+        $pricePerItem = (float) $cart->price_per_item;
+        $timePerItem = (int) $cart->time_per_item;
 
-            $lineTotalPrice = $pricePerItem * $cart->count;
+        $lineTotalPrice = $pricePerItem * $cart->count;
 
-            $totalPrice += $lineTotalPrice;
-            $totalTime = max($totalTime, $timePerItem * $cart->count);
+        $totalPrice += $lineTotalPrice;
+        $totalTime = max($totalTime, $timePerItem * $cart->count);
 
-            if ($cart->room) {
-                $rooms[] = [
-                    'id' => $cart->room->id,
-                    'name' => $cart->room->name,
-                    'image_url' => $cart->room->image_url,
-                    'price' => $pricePerItem,
-                    2,
-                    'time' => $timePerItem,
-                    2,
-                    'count' => $cart->count,
-                ];
-            }
-
-            if ($cart->item) {
-                $items[] = [
-                    'id' => $cart->item->id,
-                    'name' => $cart->item->name,
-                    'image_url' => $cart->item->image_url,
-                    'price' => $pricePerItem,
-                    2,
-                    'count' => $cart->count,
-                    'time' => $timePerItem,
-                    2,
-                ];
-            }
+        if ($cart->room) {
+            $rooms[] = [
+                'id' => $cart->room->id,
+                'name' => $cart->room->name,
+                'image_url' => $cart->room->image_url,
+                'price' => $pricePerItem,
+                'time' => $timePerItem,
+                'count' => $cart->count,
+            ];
         }
 
-        return response()->json([
-            'rooms' => $rooms,
-            'items' => $items,
-            'total_price' => $totalPrice,
-            2,
-            'total_time' => $totalTime,
-            2,
-        ], 200);
+        if ($cart->item) {
+            $items[] = [
+                'id' => $cart->item->id,
+                'name' => $cart->item->name,
+                'image_url' => $cart->item->image_url,
+                'price' => $pricePerItem,
+                'count' => $cart->count,
+                'time' => $timePerItem,
+            ];
+        }
     }
+
+    return response()->json([
+        'rooms' => $rooms,
+        'items' => $items,
+        'total_price' => round($totalPrice, 2),
+        'total_time' => $totalTime,
+    ], 200);
+}
 
 
 
@@ -937,7 +932,7 @@ class CustomerController extends Controller
             return 1;
         }
     }
-//AAAA
+    //AAAA
     // public function getTrending()
     // {
 
@@ -1004,34 +999,48 @@ class CustomerController extends Controller
         $activeDiscounts = Discount::where('start_date', '<=', $now)
             ->where('end_date', '>=', $now)
             ->with(['room', 'item'])
-            ->get()
-            ->map(function ($discount) {
-                $originalPrice = $discount->room?->price ?? $discount->item?->price ?? null;
+            ->get();
 
-                $discountedPrice = $originalPrice
+        $roomDiscounts = [];
+        $itemDiscounts = [];
+
+        foreach ($activeDiscounts as $discount) {
+            $isRoomDiscount = $discount->room_id !== null;
+            $isItemDiscount = $discount->item_id !== null;
+
+            $model = $isRoomDiscount ? $discount->room : $discount->item;
+            $originalPrice = $model?->price ?? null;
+            $imageUrl = $model?->image_url ?? null;
+            $name = $model?->name ?? null;
+
+            $discountData = [
+                'id' => $discount->id,
+                'room_id' => $discount->room_id,
+                'item_id' => $discount->item_id,
+                'discount_percentage' => $discount->discount_percentage,
+                'start_date' => $discount->start_date,
+                'end_date' => $discount->end_date,
+                'original_price' => $originalPrice,
+                'discounted_price' => $originalPrice
                     ? round($originalPrice * (1 - $discount->discount_percentage / 100), 2)
-                    : null;
-                    $imageUrl = $discount->room?->image_url ?? $discount->item?->image_url ?? null;
+                    : null,
+                'image_url' => $imageUrl,
+                'name' => $name, // أضفنا الاسم هنا
+            ];
 
-                return [
-                    'id' => $discount->id,
-                    'room_id' => $discount->room_id,
-                    'item_id' => $discount->item_id,
-                    'discount_percentage' => $discount->discount_percentage,
-                    'start_date' => $discount->start_date,
-                    'end_date' => $discount->end_date,
-                    'original_price' => $originalPrice,
-                    'discounted_price' => $discountedPrice,
-                    'image_url' => $imageUrl, 
-
-                ];
-            });
+            if ($isRoomDiscount) {
+                $roomDiscounts[] = $discountData;
+            } elseif ($isItemDiscount) {
+                $itemDiscounts[] = $discountData;
+            }
+        }
 
         return response()->json([
             'message' => 'Trending items and rooms',
             'trending_items' => $trendingItems,
             'trending_rooms' => $trendingRooms,
-            'discounts' => $activeDiscounts,
+            'room_discounts' => $roomDiscounts,
+            'item_discounts' => $itemDiscounts,
         ], 200);
     }
 
@@ -3212,23 +3221,28 @@ class CustomerController extends Controller
 {
     $discount = Discount::with(['room.items', 'item'])->findOrFail($id);
 
-    // السعر الأصلي
     $originalPrice = $discount->item
         ? $discount->item->price
         : ($discount->room ? $discount->room->price : 0);
 
-    // السعر بعد الخصم
     $discountedPrice = $originalPrice - ($originalPrice * ($discount->discount_percentage / 100));
 
     $details = [
         'discount_percentage' => $discount->discount_percentage,
-        'start_date' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
-        'end_date' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
-        'original_price' => number_format($originalPrice, 2),
-        'discounted_price' => number_format($discountedPrice, 2),
+
+        'start_date' => [
+            'date_only' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
+            'full' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d H:i:s'),
+        ],
+        'end_date' => [
+            'date_only' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
+            'full' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d H:i:s'),
+        ],
+
+        'original_price' => (float) number_format($originalPrice, 2, '.', ''),
+        'discounted_price' => (float) number_format($discountedPrice, 2, '.', ''),
     ];
 
-    // إذا كان الخصم على غرفة
     if ($discount->room) {
         $details['room_id'] = $discount->room->id;
         $details['room_name'] = $discount->room->name;
@@ -3238,13 +3252,12 @@ class CustomerController extends Controller
             return [
                 'id' => $item->id,
                 'name' => $item->name,
-                'price' => number_format($item->price, 2),
+                'price' => (float) number_format($item->price, 2, '.', ''),
                 'image_url' => $item->image_url,
             ];
         })->toArray();
     }
 
-    // إذا كان الخصم على عنصر
     if ($discount->item) {
         $details['item_id'] = $discount->item->id;
         $details['item_name'] = $discount->item->name;
@@ -3253,7 +3266,5 @@ class CustomerController extends Controller
 
     return response()->json($details);
 }
-
-
 
 }

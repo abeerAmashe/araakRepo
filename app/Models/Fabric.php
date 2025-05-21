@@ -23,9 +23,9 @@ class Fabric extends Model
     }
 
     public function colors()
-{
-    return $this->hasMany(Color::class);
-}
+    {
+        return $this->hasMany(Color::class);
+    }
 
     public function types()
     {
@@ -39,11 +39,16 @@ class Fabric extends Model
 
     public function itemDetails()
     {
-        return $this->belongsToMany(ItemDetail::class);  
+        return $this->belongsToMany(ItemDetail::class);
     }
     public function roomDetail()
-{
-    return $this->belongsTo(RoomDetail::class);
-}
+    {
+        return $this->belongsTo(RoomDetail::class);
+    }
 
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'item_fabric');
+    }
 }

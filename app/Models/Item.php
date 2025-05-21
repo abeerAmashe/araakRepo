@@ -78,4 +78,14 @@ class Item extends Model
     {
         return $this->belongsTo(ItemType::class);
     }
+
+    public function woods()
+    {
+        return $this->belongsToMany(Wood::class, 'item_wood');
+    }
+
+    public function fabrics()
+    {
+        return $this->belongsToMany(Fabric::class, 'item_fabric');
+    }
 }

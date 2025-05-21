@@ -38,10 +38,15 @@ class Wood extends Model
     }
     public function itemDetails()
     {
-        return $this->belongsToMany(ItemDetail::class);  
+        return $this->belongsToMany(ItemDetail::class);
     }
     public function roomDetail()
     {
         return $this->belongsTo(RoomDetail::class);
+    }
+
+    public function items()
+    {
+        return $this->belongsToMany(Item::class, 'item_wood');
     }
 }
