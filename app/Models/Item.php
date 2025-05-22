@@ -10,21 +10,25 @@ class Item extends Model
     use HasFactory;
 
     protected $fillable = [
-        'id',
         'room_id',
         'name',
         'time',
         'price',
-        'count',
         'image_url',
         'count_reserved',
         'item_type_id',
-        'description'
+        'description',
+        'wood_color',
+        'wood_type',
+        'fabric_type',
+        'fabric_color',
+        'count',
+
     ];
 
     public function itemDetail()
     {
-        return $this->hasOne(ItemDetail::class);
+        return $this->hasMany(ItemDetail::class);
     }
 
     public function customer()

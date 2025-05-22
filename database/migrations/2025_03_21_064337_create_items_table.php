@@ -19,6 +19,11 @@ return new class extends Migration
             $table->float('price');
             $table->string('image_url')->nullable();
             $table->string('description')->nullable();
+            $table->string('wood_color')->nullable();
+            $table->string('wood_type')->nullable();
+            $table->string('fabric_type')->nullable();
+            $table->string('fabric_color')->nullable();
+
             $table->integer('count');
             $table->integer('count_reserved')->default(0);
             $table->unsignedBigInteger('item_type_id'); // عمود المفتاح الخارجي

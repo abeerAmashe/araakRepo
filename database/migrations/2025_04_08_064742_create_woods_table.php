@@ -24,6 +24,13 @@ return new class extends Migration
                 ->references('id')
                 ->on('room_details')
                 ->onDelete('cascade');
+
+            $table->unsignedBigInteger('item_wood_id')->nullable();
+            $table->foreign('item_wood_id')
+                ->references('id')
+                ->on('item_wood')
+                ->onDelete('cascade');
+
             $table->timestamps();
         });
     }

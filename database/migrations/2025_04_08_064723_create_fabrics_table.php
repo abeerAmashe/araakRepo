@@ -15,13 +15,19 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->float('price_per_meter');
-            
+
             $table->unsignedBigInteger('room_detail_id')->nullable();
 
             $table->foreign('room_detail_id')
-                  ->references('id')
-                  ->on('room_details')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('room_details')
+                ->onDelete('cascade');
+            $table->unsignedBigInteger('item_fabric_id')->nullable();
+
+            $table->foreign('item_fabric_id')
+                ->references('id')
+                ->on('item_fabric')
+                ->onDelete('cascade');
 
             $table->timestamps();
         });

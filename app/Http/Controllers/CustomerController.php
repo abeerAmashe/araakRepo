@@ -50,37 +50,42 @@ use Illuminate\Support\Facades\Auth;
 class CustomerController extends Controller
 {
     public function showFurniture()
-    {
-        $response = Room::with('items')->get()->map(function ($room) {
-            return [
-                'id' => $room->id,
-                'name' => $room->name,
-                'time' => $room->items->sum('time'),
-                'price' => $room->price,
-                'description' => $room->description,
-                'image_url' => $room->image_url,
-                'items' => $room->items->map(function ($items) {
-                    return [
-                        'id' => $items->id,
-                        'name' => $items->name,
-                        'time' => $items->time,
-                        'price' => $items->price,
-                        'image_url' => $items->image_url,
-                        'wood_id' => optional(Wood::where('id', optional($items->itemDetail)->wood_id)->first())->id,
-                        'wood_name' => optional(Wood::where('id', optional($items->itemDetail)->wood_id)->first())->name,
-                        'wood_color' => optional(Wood::where('id', optional($items->itemDetail)->wood_id)->first())->color,
-                        'wood_price_per_meter' => optional(Wood::where('id', optional($items->itemDetail)->wood_id)->first())->price_per_meter,
-                        'fabric_id' => optional(Fabric::where('id', optional($items->itemDetail)->fabric_id)->first())->id,
-                        'fabric_name' => optional(Fabric::where('id', optional($items->itemDetail)->fabric_id)->first())->name,
-                        'fabric_color' => optional(Fabric::where('id', optional($items->itemDetail)->fabric_id)->first())->color,
-                        'fabric_price_per_meter' => optional(Fabric::where('id', optional($items->itemDetail)->fabric_id)->first())->price_per_meter,
-                    ];
-                }),
-            ];
-        });
+{
+    $response = Room::with('items')->get()->map(function ($room) {
+        return [
+            'id' => $room->id,
+            'name' => $room->name,
+            'time' => $room->items->sum('time'),
+            'price' => $room->price,
+            'description' => $room->description,
+            'image_url' => $room->image_url,
+            'items' => $room->items->map(function ($item) {
+                $itemDetail = $item->itemDetail->first();
 
-        return response()->json(['allRooms' => $response], 200);
-    }
+                $wood = $itemDetail ? Wood::find($itemDetail->wood_id) : null;
+                $fabric = $itemDetail ? Fabric::find($itemDetail->fabric_id) : null;
+
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'time' => $item->time,
+                    'price' => $item->price,
+                    'image_url' => $item->image_url,
+                    'wood_id' => optional($wood)->id,
+                    'wood_name' => optional($wood)->name,
+                    'wood_color' => optional($wood)->color,
+                    'wood_price_per_meter' => optional($wood)->price_per_meter,
+                    'fabric_id' => optional($fabric)->id,
+                    'fabric_name' => optional($fabric)->name,
+                    'fabric_color' => optional($fabric)->color,
+                    'fabric_price_per_meter' => optional($fabric)->price_per_meter,
+                ];
+            }),
+        ];
+    });
+
+    return response()->json(['allRooms' => $response], 200);
+}
 
     public function getAllCategories()
     {
@@ -699,61 +704,61 @@ class CustomerController extends Controller
     // }
 
     public function getCartDetails()
-{
-    $customerId = auth()->user()->customer->id;
+    {
+        $customerId = auth()->user()->customer->id;
 
-    $cartItems = \App\Models\Cart::with([
-        'item',
-        'room',
-    ])
-        ->where('customer_id', $customerId)
-        ->get();
+        $cartItems = \App\Models\Cart::with([
+            'item',
+            'room',
+        ])
+            ->where('customer_id', $customerId)
+            ->get();
 
-    $rooms = [];
-    $items = [];
-    $totalPrice = 0;
-    $totalTime = 0;
+        $rooms = [];
+        $items = [];
+        $totalPrice = 0;
+        $totalTime = 0;
 
-    foreach ($cartItems as $cart) {
-        // تأكد من تحويل السعر والوقت إلى أرقام
-        $pricePerItem = (float) $cart->price_per_item;
-        $timePerItem = (int) $cart->time_per_item;
+        foreach ($cartItems as $cart) {
+            // تأكد من تحويل السعر والوقت إلى أرقام
+            $pricePerItem = (float) $cart->price_per_item;
+            $timePerItem = (int) $cart->time_per_item;
 
-        $lineTotalPrice = $pricePerItem * $cart->count;
+            $lineTotalPrice = $pricePerItem * $cart->count;
 
-        $totalPrice += $lineTotalPrice;
-        $totalTime = max($totalTime, $timePerItem * $cart->count);
+            $totalPrice += $lineTotalPrice;
+            $totalTime = max($totalTime, $timePerItem * $cart->count);
 
-        if ($cart->room) {
-            $rooms[] = [
-                'id' => $cart->room->id,
-                'name' => $cart->room->name,
-                'image_url' => $cart->room->image_url,
-                'price' => $pricePerItem,
-                'time' => $timePerItem,
-                'count' => $cart->count,
-            ];
+            if ($cart->room) {
+                $rooms[] = [
+                    'id' => $cart->room->id,
+                    'name' => $cart->room->name,
+                    'image_url' => $cart->room->image_url,
+                    'price' => $pricePerItem,
+                    'time' => $timePerItem,
+                    'count' => $cart->count,
+                ];
+            }
+
+            if ($cart->item) {
+                $items[] = [
+                    'id' => $cart->item->id,
+                    'name' => $cart->item->name,
+                    'image_url' => $cart->item->image_url,
+                    'price' => $pricePerItem,
+                    'count' => $cart->count,
+                    'time' => $timePerItem,
+                ];
+            }
         }
 
-        if ($cart->item) {
-            $items[] = [
-                'id' => $cart->item->id,
-                'name' => $cart->item->name,
-                'image_url' => $cart->item->image_url,
-                'price' => $pricePerItem,
-                'count' => $cart->count,
-                'time' => $timePerItem,
-            ];
-        }
+        return response()->json([
+            'rooms' => $rooms,
+            'items' => $items,
+            'total_price' => round($totalPrice, 2),
+            'total_time' => $totalTime,
+        ], 200);
     }
-
-    return response()->json([
-        'rooms' => $rooms,
-        'items' => $items,
-        'total_price' => round($totalPrice, 2),
-        'total_time' => $totalTime,
-    ], 200);
-}
 
 
 
@@ -1479,58 +1484,132 @@ class CustomerController extends Controller
     }
 
 
-    public function getItemDetails($item_id)
-    {
-        $item = \App\Models\Item::with('itemDetail')->find($item_id);
 
-        if (!$item) {
-            return response()->json(['message' => 'Item not found'], 200);
-        }
 
-        $likesCount = $item->likes()->count();
-        $ratings = $item->ratings;
+    // public function getItemDetails($itemId)
+    // {
+    //     $item = Item::with([
+    //         'itemDetail.itemWoods.wood.colors',
+    //         'itemDetail.itemWoods.wood.types',
+    //         'itemDetail.itemFabrics.fabric.colors',
+    //         'itemDetail.itemFabrics.fabric.types',
+    //         'ratings.customer'
+    //     ])->where('id', $itemId)->first();
 
-        $averageRate = $ratings->avg('rate') ?? 0;
-        $feedbacks = $ratings->pluck('feedback')->filter()->values();
+    //     if (!$item) {
+    //         return response()->json(['message' => 'Item not found']);
+    //     }
 
-        $hasLiked = false;
-        $isFavorite = false;
+    //     $averageRating = $item->ratings()->avg('rate');
 
-        $user = auth()->user();
-        if ($user && $user->customer) {
-            $customer = $user->customer;
+    //     $ratings = $item->ratings->map(function ($rating) {
+    //         return [
+    //             'feedback' => $rating->feedback,
+    //             'rate' => $rating->rate,
+    //             'customer' => [
+    //                 'id' => $rating->customer->id,
+    //                 'name' => $rating->customer->name,
+    //                 'image_url' => $rating->customer->image_url ?? null,
+    //             ],
+    //         ];
+    //     });
 
-            $hasLiked = $item->likes()
-                ->where('customer_id', $customer->id)
-                ->exists();
+    //     $customerId = auth()->check() ? auth()->id() : null;
 
-            $isFavorite = $item->favorites()
-                ->where('customer_id', $customer->id)
-                ->where('item_id', $item->id)
-                ->exists();
-        }
+    //     $isLiked = $customerId
+    //         ? \App\Models\Like::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+    //         : false;
 
-        return response()->json([
-            'item' => [
-                'id' => $item->id,
-                'name' => $item->name,
-                'price' => $item->price,
-                'time' => $item->time,
-                'wood_id' => optional($item->itemDetail)->wood_id,
-                'fabric_id' => optional($item->itemDetail)->fabric_id,
-                'wood_length' => optional($item->itemDetail)->wood_length,
-                'wood_width' => optional($item->itemDetail)->wood_width,
-                'wood_height' => optional($item->itemDetail)->wood_height,
-                'likes_count' => $likesCount,
-                'average_rate' => round($averageRate, 2),
-                'feedbacks' => $feedbacks,
-                'description' => $item->description,
-                'image' => $item->image_url,
-                'has_liked' => $hasLiked,
-                'is_favorite' => $isFavorite,
-            ]
-        ], 200);
+    //     $isFavorite = $customerId
+    //         ? \App\Models\Favorite::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+    //         : false;
+
+    //     $likeCounts = \App\Models\Like::where('item_id', $itemId)->count();
+
+    //     $response = [
+    //         'item_details' => $item->itemDetail,
+    //         'average_rating' => round($averageRating, 2),
+    //         'ratings' => $ratings,
+    //         'is_liked' => $isLiked,
+    //         'is_favorite' => $isFavorite,
+    //         'like_counts' => $likeCounts,
+    //     ];
+
+    //     return response()->json($response);
+    // }
+
+
+public function getItemDetails($itemId)
+{
+    $item = Item::with([
+        'itemDetail.itemWoods.wood.colors',
+        'itemDetail.itemWoods.wood.types',
+        'itemDetail.itemFabrics.fabric.colors',
+        'itemDetail.itemFabrics.fabric.types',
+        'ratings.customer'
+    ])->where('id', $itemId)->first();
+
+    if (!$item) {
+        return response()->json(['message' => 'Item not found']);
     }
+
+    $averageRating = $item->ratings()->avg('rate');
+
+    $ratings = $item->ratings->map(function ($rating) {
+        return [
+            'feedback' => $rating->feedback,
+            'rate' => $rating->rate,
+            'customer' => [
+                'id' => $rating->customer->id,
+                'name' => $rating->customer->name,
+                'image_url' => $rating->customer->image_url ?? null,
+            ],
+        ];
+    });
+
+    $customerId = auth()->check() ? auth()->id() : null;
+
+    $isLiked = $customerId
+        ? \App\Models\Like::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+        : false;
+
+    $isFavorite = $customerId
+        ? \App\Models\Favorite::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+        : false;
+
+    $likeCounts = \App\Models\Like::where('item_id', $itemId)->count();
+
+    $response = [
+        // ✅ تفاصيل العنصر الأساسية من جدول items
+        'item' => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'image_url' => $item->image_url,
+            'description' => $item->description,
+            'price' => $item->price,
+            'time' => $item->time,
+            'count' => $item->count,
+            'count_reserved' => $item->count_reserved,
+            'wood_color' => $item->wood_color,
+            'wood_type' => $item->wood_type,
+            'fabric_color' => $item->fabric_color,
+            'fabric_type' => $item->fabric_type,
+        ],
+
+        // ✅ باقي البيانات كما هي بدون تعديل
+        'item_details' => $item->itemDetail,
+        'average_rating' => round($averageRating, 2),
+        'ratings' => $ratings,
+        'is_liked' => $isLiked,
+        'is_favorite' => $isFavorite,
+        'like_counts' => $likeCounts,
+    ];
+
+    return response()->json($response);
+}
+
+
+
 
 
 
@@ -1539,6 +1618,7 @@ class CustomerController extends Controller
 
     // public function addFeedback(Request $request)
     // {
+
     //     $user = auth()->user();
     //     $customer = $user->customer;
 
@@ -3218,53 +3298,52 @@ class CustomerController extends Controller
 
 
     public function showDiscountDetails($id)
-{
-    $discount = Discount::with(['room.items', 'item'])->findOrFail($id);
+    {
+        $discount = Discount::with(['room.items', 'item'])->findOrFail($id);
 
-    $originalPrice = $discount->item
-        ? $discount->item->price
-        : ($discount->room ? $discount->room->price : 0);
+        $originalPrice = $discount->item
+            ? $discount->item->price
+            : ($discount->room ? $discount->room->price : 0);
 
-    $discountedPrice = $originalPrice - ($originalPrice * ($discount->discount_percentage / 100));
+        $discountedPrice = $originalPrice - ($originalPrice * ($discount->discount_percentage / 100));
 
-    $details = [
-        'discount_percentage' => $discount->discount_percentage,
+        $details = [
+            'discount_percentage' => $discount->discount_percentage,
 
-        'start_date' => [
-            'date_only' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
-            'full' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d H:i:s'),
-        ],
-        'end_date' => [
-            'date_only' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
-            'full' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d H:i:s'),
-        ],
+            'start_date' => [
+                'date_only' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
+                'full' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d H:i:s'),
+            ],
+            'end_date' => [
+                'date_only' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
+                'full' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d H:i:s'),
+            ],
 
-        'original_price' => (float) number_format($originalPrice, 2, '.', ''),
-        'discounted_price' => (float) number_format($discountedPrice, 2, '.', ''),
-    ];
+            'original_price' => (float) number_format($originalPrice, 2, '.', ''),
+            'discounted_price' => (float) number_format($discountedPrice, 2, '.', ''),
+        ];
 
-    if ($discount->room) {
-        $details['room_id'] = $discount->room->id;
-        $details['room_name'] = $discount->room->name;
-        $details['room_image'] = $discount->room->image_url;
+        if ($discount->room) {
+            $details['room_id'] = $discount->room->id;
+            $details['room_name'] = $discount->room->name;
+            $details['room_image'] = $discount->room->image_url;
 
-        $details['room_items'] = $discount->room->items->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'name' => $item->name,
-                'price' => (float) number_format($item->price, 2, '.', ''),
-                'image_url' => $item->image_url,
-            ];
-        })->toArray();
+            $details['room_items'] = $discount->room->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'price' => (float) number_format($item->price, 2, '.', ''),
+                    'image_url' => $item->image_url,
+                ];
+            })->toArray();
+        }
+
+        if ($discount->item) {
+            $details['item_id'] = $discount->item->id;
+            $details['item_name'] = $discount->item->name;
+            $details['item_image'] = $discount->item->image_url;
+        }
+
+        return response()->json($details);
     }
-
-    if ($discount->item) {
-        $details['item_id'] = $discount->item->id;
-        $details['item_name'] = $discount->item->name;
-        $details['item_image'] = $discount->item->image_url;
-    }
-
-    return response()->json($details);
-}
-
 }

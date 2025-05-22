@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('item_wood', function (Blueprint $table) {
+        Schema::create('item_fabric', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('item_id')->constrained()->onDelete('cascade');
-            $table->foreignId('wood_id')->constrained('woods'); // ✅ الصحيح لأنه جدول wood اسمه الحقيقي woods
+            // $table->foreignId('item_id')->constrained()->onDelete('cascade');
+            $table->foreignId('item_detail_id')->constrained()->onDelete('cascade');
         });
+        
     }
 
     /**
@@ -23,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('item_fabric');
     }
 };

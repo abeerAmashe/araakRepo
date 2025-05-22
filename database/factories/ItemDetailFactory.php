@@ -21,8 +21,7 @@ class ItemDetailFactory extends Factory
             'wood_width' => $this->faker->randomFloat(2, 10, 100),
             'wood_height' => $this->faker->randomFloat(2, 5, 50),
             'fabric_dimension' => $this->faker->numberBetween(10, 100),
-            'wood_color' => $this->faker->colorName(),
-            'fabric_color' => $this->faker->colorName(),
+           
         ];
     }
 }

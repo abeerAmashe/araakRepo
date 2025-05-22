@@ -10,10 +10,10 @@ class Fabric extends Model
     use HasFactory;
 
     protected $fillable = [
-        'id',
         'name',
         'price_per_meter',
-        'room_detail_id'
+        'room_detail_id',
+        'item_fabric_id'
 
     ];
 
@@ -39,7 +39,7 @@ class Fabric extends Model
 
     public function itemDetails()
     {
-        return $this->belongsToMany(ItemDetail::class);
+        return $this->hasMany(ItemDetail::class);
     }
     public function roomDetail()
     {

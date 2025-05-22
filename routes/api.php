@@ -41,12 +41,14 @@ Route::get('filterItemsWithType', [CustomerController::class, 'filterItemsWithTy
 
 
 
+
+
 Route::middleware('auth:sanctum')->group(function () {
     //price
     //home_page:
 
+    Route::get('/getItemDetails/{itemId}', [CustomerController::class, 'getItemDetails']);
 
-    Route::post('/getItemDetails/{item_id}', [CustomerController::class, 'getItemDetails']);
 
     Route::get('/Recommend', [CustomerController::class, 'recommend']);
     //.
@@ -135,8 +137,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/getFavoritesWithDetails', [CustomerController::class, 'getFavoritesWithDetails']);
     Route::get('/getRoomDetails/{room_id}', [CustomerController::class, 'getRoomDetails']);
     Route::get('/cart_details', [CustomerController::class, 'getCartDetails']);
-    Route::get('/getItemDetails/{item_id}', [CustomerController::class, 'getItemDetails']);
     Route::post('/addToCartFavorite', [CustomerController::class, 'addToCartFavorite']);
-
-
 });

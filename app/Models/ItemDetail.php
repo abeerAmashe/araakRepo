@@ -4,12 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ItemDetail extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'id',
         'item_id',
         'wood_id',
         'fabric_id',
@@ -17,23 +17,30 @@ class ItemDetail extends Model
         'wood_width',
         'wood_height',
         'fabric_dimension',
-        'wood_color',
-        'fabric_color'
+       
 
     ];
 
     public function fabric()
     {
-        return $this->hasOne(Fabric::class);
+        return $this->belongsTo(Fabric::class);
     }
 
     public function wood()
     {
-        return $this->hasOne(Wood::class);
+        return $this->belongsTo(Wood::class);
     }
 
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+    public function itemWoods()
+    {
+        return $this->HasMany(ItemWood::class);
+    }
+     public function itemFabrics()
+    {
+        return $this->HasMany(ItemFabric::class);
     }
 }

@@ -13,15 +13,13 @@ return new class extends Migration
     {
         Schema::create('item_details', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('wood_id')->constrained('woods')->cascadeOnDelete();
             $table->foreignId('item_id')->constrained('items')->cascadeOnDelete();
-            $table->foreignId('fabric_id')->constrained('fabrics')->cascadeOnDelete();
+
             $table->float('wood_length')->nullable();
             $table->float('wood_width')->nullable();
             $table->float('wood_height')->nullable();
             $table->integer('fabric_dimension');
-            $table->string('wood_color')->nullable();  
-            $table->string('fabric_color')->nullable();  
+
             $table->timestamps();
         });
     }

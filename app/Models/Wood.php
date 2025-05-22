@@ -17,7 +17,9 @@ class Wood extends Model
         'id',
         'name',
         'price_per_meter',
-        'room_detail_id'
+        'room_detail_id',
+        'item_wood_id',
+        'color'
 
     ];
 
@@ -38,7 +40,7 @@ class Wood extends Model
     }
     public function itemDetails()
     {
-        return $this->belongsToMany(ItemDetail::class);
+        return $this->hasMany(ItemDetail::class);
     }
     public function roomDetail()
     {
