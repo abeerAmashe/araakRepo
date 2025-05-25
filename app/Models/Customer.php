@@ -14,7 +14,8 @@ class Customer extends Model
         'latitude',
         'longitude',
         'phone_number',
-        'profile_image'
+        'profile_image',
+        'address'
     ];
 
     public function user()

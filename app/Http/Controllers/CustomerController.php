@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AvailableTime;
+use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Complaint;
@@ -50,42 +51,49 @@ use Illuminate\Support\Facades\Auth;
 class CustomerController extends Controller
 {
     public function showFurniture()
-{
-    $response = Room::with('items')->get()->map(function ($room) {
-        return [
-            'id' => $room->id,
-            'name' => $room->name,
-            'time' => $room->items->sum('time'),
-            'price' => $room->price,
-            'description' => $room->description,
-            'image_url' => $room->image_url,
-            'items' => $room->items->map(function ($item) {
-                $itemDetail = $item->itemDetail->first();
-
-                $wood = $itemDetail ? Wood::find($itemDetail->wood_id) : null;
-                $fabric = $itemDetail ? Fabric::find($itemDetail->fabric_id) : null;
-
+    {
+        $response = Room::with(['items' => function ($q) {
+            $q->withCount('likes')->withAvg('ratings', 'rate');
+        }])
+            ->withCount('likes')
+            ->withAvg('ratings', 'rate')
+            ->get()
+            ->map(function ($room) {
                 return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'time' => $item->time,
-                    'price' => $item->price,
-                    'image_url' => $item->image_url,
-                    'wood_id' => optional($wood)->id,
-                    'wood_name' => optional($wood)->name,
-                    'wood_color' => optional($wood)->color,
-                    'wood_price_per_meter' => optional($wood)->price_per_meter,
-                    'fabric_id' => optional($fabric)->id,
-                    'fabric_name' => optional($fabric)->name,
-                    'fabric_color' => optional($fabric)->color,
-                    'fabric_price_per_meter' => optional($fabric)->price_per_meter,
-                ];
-            }),
-        ];
-    });
+                    'id' => $room->id,
+                    'name' => $room->name,
+                    'time' => $room->items->sum('time'),
+                    'price' => $room->price,
+                    'description' => $room->description,
+                    'image_url' => $room->image_url,
+                    'like_count' => $room->likes_count,
+                    'average_rating' => round($room->ratings_avg_rate ?? 0, 2),
+                    'items' => $room->items->map(function ($item) {
+                        $itemDetail = $item->itemDetail->first();
+                        $wood = $itemDetail ? Wood::find($itemDetail->wood_id) : null;
+                        $fabric = $itemDetail ? Fabric::find($itemDetail->fabric_id) : null;
 
-    return response()->json(['allRooms' => $response], 200);
-}
+                        return [
+                            'id' => $item->id,
+                            'name' => $item->name,
+                            'time' => $item->time,
+                            'price' => $item->price,
+                            'image_url' => $item->image_url,
+                            'wood_id' => optional($wood)->id,
+                            'wood_name' => optional($wood)->name,
+                            'wood_color' => optional($wood)->color,
+                            'wood_price_per_meter' => optional($wood)->price_per_meter,
+                            'fabric_id' => optional($fabric)->id,
+                            'fabric_name' => optional($fabric)->name,
+                            'fabric_color' => optional($fabric)->color,
+                            'fabric_price_per_meter' => optional($fabric)->price_per_meter,
+                        ];
+                    }),
+                ];
+            });
+
+        return response()->json(['allRooms' => $response], 200);
+    }
 
     public function getAllCategories()
     {
@@ -159,32 +167,6 @@ class CustomerController extends Controller
             ]
         ], 200);
     }
-
-    // public function addToFavorites(Request $request)
-    // {
-    //     $user = auth()->user();
-
-    //     $request->validate([
-    //         'item_id' => 'nullable|integer|exists:items,id',
-    //         'room_id' => 'nullable|integer|exists:rooms,id'
-    //     ]);
-
-    //     if (!$request->item_id && !$request->room_id) {
-    //         return response()->json(['message' => 'There must be a "room_id" or "item_id"'], 200);
-    //     }
-
-    //     $favorite = Favorite::create([
-    //         'customer_id' => $user->customer->id,
-    //         'item_id' => $request->item_id,
-    //         'room_id' => $request->room_id
-    //     ]);
-
-    //     return response()->json([
-    //         'message' => 'Done ^-^',
-    //         $user
-    //     ]);
-    // }
-
 
     public function toggleFavorite(Request $request)
     {
@@ -664,45 +646,6 @@ class CustomerController extends Controller
         ]);
     }
 
-    // public function getCartDetails()
-    // {
-    //     $user = auth()->user();
-
-    //     if (!$user || !$user->customer) {
-    //         return response()->json(['message' => 'login is required'], 200);
-    //     }
-
-    //     $customerId = $user->customer->id;
-
-    //     $cartItems = Cart::with([
-    //         'item',
-    //         'room.items', // جلب العناصر المرتبطة بالغرفة
-    //         'customization',
-    //         'roomCustomization'
-    //     ])->where('customer_id', $customerId)->get();
-
-    //     if ($cartItems->isEmpty()) {
-    //         return response()->json(['message' => 'cart is empty']);
-    //     }
-
-    //     $totalPrice = 0;
-    //     $totalTime = 0;
-
-    //     foreach ($cartItems as $cartItem) {
-    //         $totalPrice += $cartItem->price_per_item;
-    //         $totalTime = max($totalTime, $cartItem->time_per_item);
-    //     }
-
-    //     $requiredDeposit = $totalPrice * 0.5;
-
-    //     return response()->json([
-    //         'cart details:' => $cartItems,
-    //         'total_price' => $totalPrice,
-    //         'total_time' => $totalTime,
-    //         'required_deposit' => $requiredDeposit,
-    //     ], 200);
-    // }
-
     public function getCartDetails()
     {
         $customerId = auth()->user()->customer->id;
@@ -759,16 +702,6 @@ class CustomerController extends Controller
             'total_time' => $totalTime,
         ], 200);
     }
-
-
-
-
-
-
-
-
-
-
 
     public function toggleLike(Request $request)
     {
@@ -937,36 +870,7 @@ class CustomerController extends Controller
             return 1;
         }
     }
-    //AAAA
-    // public function getTrending()
-    // {
 
-    //     $trendingItems = Item::withCount('likes')
-    //         ->orderByDesc('likes_count')
-    //         ->take(5)
-    //         ->get();
-
-    //     $trendingRooms = Room::withCount('likes')
-    //         ->orderByDesc('likes_count')
-    //         ->take(5)
-    //         ->get();
-
-
-
-    //     $now = Carbon::now();
-    //     $activeDiscounts = Discount::where('start_date', '<=', $now)
-    //         ->where('end_date', '>=', $now)
-    //         ->get();
-
-
-    //     return response()->json([
-    //         'message' => 'Trending items and rooms',
-    //         'trending_items' => $trendingItems,
-    //         'trending_rooms' => $trendingRooms,
-    //         'discounts' => $activeDiscounts,
-
-    //     ], 200);
-    // }
 
     //الغرف والعناصر الاكثر مبيعا
 
@@ -1108,21 +1012,25 @@ class CustomerController extends Controller
         $recommendedItems = Item::whereHas('room', fn($q) => $q->whereIn('category_id', $topCategoryIds))
             ->whereNotIn('id', $excludedItemIds)
             ->with('room')
+            ->withAvg('ratings', 'rate')
             ->take(10)
             ->get()
             ->map(function ($item) {
                 $data = $item->toArray();
                 $data['category_id'] = $item->room->category_id ?? null;
+                $data['average_rating'] = round($item->ratings_avg_rate, 2);
                 return $data;
             });
 
         $recommendedRooms = Room::whereIn('category_id', $topCategoryIds)
             ->with('items')
+            ->withAvg('ratings', 'rate')
             ->take(10)
             ->get()
             ->map(function ($room) {
                 $data = $room->toArray();
                 $data['category_id'] = $room->category_id;
+                $data['average_rating'] = round($room->ratings_avg_rate, 2);
                 return $data;
             });
 
@@ -1166,7 +1074,7 @@ class CustomerController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['errors' => $validator->errors()]);
         }
 
         if ($request->has('name')) {
@@ -1266,99 +1174,6 @@ class CustomerController extends Controller
         return null;
     }
 
-    //     public function getRoomDetails($room_id, $user_id = null)
-    // {
-    //     // استرجاع تفاصيل الغرفة بناءً على room_id
-    //     $room = Room::find($room_id);
-
-    //     // التحقق إذا كانت الغرفة موجودة
-    //     if ($room) {
-    //         // استرجاع RoomDetails المرتبطة بالغرفة
-    //         $roomDetails = $room->roomDetails()->get();
-
-    //         // استرجاع الخشب المرتبط بالغرفة عبر العلاقة RoomDetail-Wood
-    //         $woodDetails = $roomDetails->flatMap(function ($roomDetail) {
-    //             return $roomDetail->woods;  // استرجاع جميع الأخشاب المرتبطة بـ RoomDetail
-    //         });
-
-    //         // استرجاع القماش المرتبط بالغرفة عبر العلاقة RoomDetail-Fabric
-    //         $fabricDetails = $roomDetails->flatMap(function ($roomDetail) {
-    //             return $roomDetail->fabrics;  // استرجاع جميع الأقمشة المرتبطة بـ RoomDetail
-    //         });
-
-    //         // استرجاع التقييمات (Rating) الخاصة بالغرفة مع بيانات العميل (Customer)
-    //         $ratings = $room->ratings()->with('customer')->get();
-
-    //         // التحقق إذا كانت الغرفة مفضلة لهذا المستخدم (إذا كان معرف المستخدم موجود)
-    //         $isFavorite = $user_id ? $room->favorites()->where('user_id', $user_id)->exists() : false;
-
-    //         // التحقق إذا قام المستخدم بعمل "لايك" على الغرفة (إذا كان معرف المستخدم موجود)
-    //         $hasLiked = $user_id ? $room->likes()->where('user_id', $user_id)->exists() : false;
-
-    //         // استرجاع عدد اللايكات
-    //         $likeCount = $room->likes()->count();
-
-    //         // استرجاع العناصر التابعة للغرفة (items) مع التفاصيل
-    //         $roomItems = $room->items()->with('itemDetail')->get();
-
-    //         // بناء مصفوفة تحتوي على جميع التفاصيل المطلوبة
-    //         $roomDetails = [
-    //             'room' => [
-    //                 'id' => $room->id,
-    //                 'name' => $room->name,
-    //                 'price' => $room->price,
-    //                 'image' => $room->image_url,
-    //                 'description' => $room->description,
-    //                 'is_favorite' => $isFavorite,
-    //                 'has_liked' => $hasLiked,
-    //                 'fabric' => $fabricDetails->map(function ($fabric) {
-    //                     return [
-    //                         'id' => $fabric->id,
-    //                         'name' => $fabric->name,
-    //                         'color' => $fabric->color,
-    //                     ];
-    //                 }),
-
-    //                 'wood' => $woodDetails->map(function ($wood) {
-    //                     return [
-    //                         'id' => $wood->id,
-    //                         'name' => $wood->name,
-    //                         'color' => $wood->color,
-    //                     ];
-    //                 }),
-
-    //                 'rating' => $ratings->avg('rate'),
-    //                 'feedbacks' => $ratings->map(function ($rating) {
-    //                     return [
-    //                         'comment' => $rating->feedback,
-    //                         'user_name' => $rating->customer->user->name,
-    //                         'user_image' => $rating->customer->profile_image,
-    //                     ];
-    //                 }),
-    //                 'like_count' => $likeCount,
-    //             ],
-
-    //             'items' => $roomItems->map(function ($item) use ($user_id) {
-    //                 return [
-    //                     'id' => $item->id,
-    //                     'name' => $item->name,
-    //                     'price' => $item->price,
-    //                     'wood_color' => $item->itemDetail->wood_color,
-    //                     'fabric_color' => $item->itemDetail->fabric_color,
-    //                     'wood_type' => $item->itemDetail->wood_type,
-    //                     'fabric_type' => $item->itemDetail->fabric_type,
-    //                     'rating' => $item->rating,
-    //                     'has_liked' => $user_id ? $item->likes()->where('user_id', $user_id)->exists() : false,
-    //                     'is_favorite' => $user_id ? $item->favorites()->where('user_id', $user_id)->exists() : false,
-    //                 ];
-    //             }),
-    //         ];
-
-    //         return response()->json($roomDetails);
-    //     }
-
-    //     return null;
-    // }
 
     public function getRoomDetails(Request $request, $room_id)
     {
@@ -1483,201 +1298,80 @@ class CustomerController extends Controller
         ]);
     }
 
+    public function getItemDetails($itemId)
+    {
+        $item = Item::with([
+            'itemDetail.itemWoods.wood.colors',
+            'itemDetail.itemWoods.wood.types',
+            'itemDetail.itemFabrics.fabric.colors',
+            'itemDetail.itemFabrics.fabric.types',
+            'ratings.customer'
+        ])->where('id', $itemId)->first();
 
+        if (!$item) {
+            return response()->json(['message' => 'Item not found']);
+        }
 
+        $averageRating = $item->ratings()->avg('rate');
 
-    // public function getItemDetails($itemId)
-    // {
-    //     $item = Item::with([
-    //         'itemDetail.itemWoods.wood.colors',
-    //         'itemDetail.itemWoods.wood.types',
-    //         'itemDetail.itemFabrics.fabric.colors',
-    //         'itemDetail.itemFabrics.fabric.types',
-    //         'ratings.customer'
-    //     ])->where('id', $itemId)->first();
+        $ratings = $item->ratings->map(function ($rating) {
+            return [
+                'feedback' => $rating->feedback,
+                'rate' => $rating->rate,
+                'customer' => [
+                    'id' => $rating->customer->id,
+                    'name' => $rating->customer->name,
+                    'image_url' => $rating->customer->image_url ?? null,
+                ],
+            ];
+        });
 
-    //     if (!$item) {
-    //         return response()->json(['message' => 'Item not found']);
-    //     }
+        $userId = auth()->id();
+        $customer = $userId ? \App\Models\Customer::where('user_id', $userId)->first() : null;
 
-    //     $averageRating = $item->ratings()->avg('rate');
+        $customerId = $customer ? $customer->id : null;
 
-    //     $ratings = $item->ratings->map(function ($rating) {
-    //         return [
-    //             'feedback' => $rating->feedback,
-    //             'rate' => $rating->rate,
-    //             'customer' => [
-    //                 'id' => $rating->customer->id,
-    //                 'name' => $rating->customer->name,
-    //                 'image_url' => $rating->customer->image_url ?? null,
-    //             ],
-    //         ];
-    //     });
+        // Debug:
+        // dd($customerId, $itemId);
 
-    //     $customerId = auth()->check() ? auth()->id() : null;
+        $isLiked = $customerId
+            ? \App\Models\Like::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+            : false;
 
-    //     $isLiked = $customerId
-    //         ? \App\Models\Like::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
-    //         : false;
+        $isFavorite = $customerId
+            ? \App\Models\Favorite::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
+            : false;
 
-    //     $isFavorite = $customerId
-    //         ? \App\Models\Favorite::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
-    //         : false;
+        $likeCounts = \App\Models\Like::where('item_id', $itemId)->count();
 
-    //     $likeCounts = \App\Models\Like::where('item_id', $itemId)->count();
+        $response = [
+            'item' => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'image_url' => $item->image_url,
+                'description' => $item->description,
+                'price' => $item->price,
+                'time' => $item->time,
+                'count' => $item->count,
+                'count_reserved' => $item->count_reserved,
+                'wood_color' => $item->wood_color,
+                'wood_type' => $item->wood_type,
+                'fabric_color' => $item->fabric_color,
+                'fabric_type' => $item->fabric_type,
+            ],
 
-    //     $response = [
-    //         'item_details' => $item->itemDetail,
-    //         'average_rating' => round($averageRating, 2),
-    //         'ratings' => $ratings,
-    //         'is_liked' => $isLiked,
-    //         'is_favorite' => $isFavorite,
-    //         'like_counts' => $likeCounts,
-    //     ];
+            'item_details' => $item->itemDetail,
+            'average_rating' => round($averageRating, 2),
+            'ratings' => $ratings,
+            'is_liked' => $isLiked,
+            'is_favorite' => $isFavorite,
+            'like_counts' => $likeCounts,
+        ];
 
-    //     return response()->json($response);
-    // }
-
-
-public function getItemDetails($itemId)
-{
-    $item = Item::with([
-        'itemDetail.itemWoods.wood.colors',
-        'itemDetail.itemWoods.wood.types',
-        'itemDetail.itemFabrics.fabric.colors',
-        'itemDetail.itemFabrics.fabric.types',
-        'ratings.customer'
-    ])->where('id', $itemId)->first();
-
-    if (!$item) {
-        return response()->json(['message' => 'Item not found']);
+        return response()->json($response);
     }
 
-    $averageRating = $item->ratings()->avg('rate');
 
-    $ratings = $item->ratings->map(function ($rating) {
-        return [
-            'feedback' => $rating->feedback,
-            'rate' => $rating->rate,
-            'customer' => [
-                'id' => $rating->customer->id,
-                'name' => $rating->customer->name,
-                'image_url' => $rating->customer->image_url ?? null,
-            ],
-        ];
-    });
-
-    $customerId = auth()->check() ? auth()->id() : null;
-
-    $isLiked = $customerId
-        ? \App\Models\Like::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
-        : false;
-
-    $isFavorite = $customerId
-        ? \App\Models\Favorite::where('item_id', $itemId)->where('customer_id', $customerId)->exists()
-        : false;
-
-    $likeCounts = \App\Models\Like::where('item_id', $itemId)->count();
-
-    $response = [
-        // ✅ تفاصيل العنصر الأساسية من جدول items
-        'item' => [
-            'id' => $item->id,
-            'name' => $item->name,
-            'image_url' => $item->image_url,
-            'description' => $item->description,
-            'price' => $item->price,
-            'time' => $item->time,
-            'count' => $item->count,
-            'count_reserved' => $item->count_reserved,
-            'wood_color' => $item->wood_color,
-            'wood_type' => $item->wood_type,
-            'fabric_color' => $item->fabric_color,
-            'fabric_type' => $item->fabric_type,
-        ],
-
-        // ✅ باقي البيانات كما هي بدون تعديل
-        'item_details' => $item->itemDetail,
-        'average_rating' => round($averageRating, 2),
-        'ratings' => $ratings,
-        'is_liked' => $isLiked,
-        'is_favorite' => $isFavorite,
-        'like_counts' => $likeCounts,
-    ];
-
-    return response()->json($response);
-}
-
-
-
-
-
-
-
-
-
-    // public function addFeedback(Request $request)
-    // {
-
-    //     $user = auth()->user();
-    //     $customer = $user->customer;
-
-    //     if (!$customer) {
-    //         return response()->json(['message' => 'Customer not found'], 200);
-    //     }
-
-    //     $request->validate([
-    //         'rate' => 'required|numeric|min:1|max:5', 
-    //         'feedback' => 'required|string|max:500', 
-    //         'item_id' => 'nullable|exists:items,id', 
-    //         'room_id' => 'nullable|exists:rooms,id', 
-    //     ]);
-
-    //     $item_id = $request->input('item_id');
-    //     $room_id = $request->input('room_id');
-
-    //     $purchaseOrders = PurchaseOrder::where('customer_id', $customer->id)->get();
-
-    //     if ($room_id) {
-    //         $roomOrderExists = RoomOrder::where('room_id', $room_id)
-    //             ->whereIn('purchase_order_id', $purchaseOrders->pluck('id'))
-    //             ->exists();
-
-    //         if (!$roomOrderExists) {
-    //             return response()->json(['message' => 'The room is not part of your purchase history'], 200);
-    //         }
-
-    //         $rating = new Rating();
-    //         $rating->customer_id = $customer->id;
-    //         $rating->room_id = $room_id;
-    //         $rating->rate = $request->rate;
-    //         $rating->feedback = $request->feedback;
-    //         $rating->save();
-
-    //         return response()->json(['message' => 'Feedback added successfully for room'], 201);
-    //     }
-
-    //     if ($item_id) {
-    //         $itemOrderExists = ItemOrder::where('item_id', $item_id)
-    //             ->whereIn('purchase_order_id', $purchaseOrders->pluck('id'))
-    //             ->exists();
-
-    //         if (!$itemOrderExists) {
-    //             return response()->json(['message' => 'The item is not part of your purchase history'], 200);
-    //         }
-
-    //         $rating = new Rating();
-    //         $rating->customer_id = $customer->id;
-    //         $rating->item_id = $item_id;
-    //         $rating->rate = $request->rate;
-    //         $rating->feedback = $request->feedback;
-    //         $rating->save();
-
-    //         return response()->json(['message' => 'Feedback added successfully for item'], 201);
-    //     }
-
-    //     return response()->json(['message' => 'You must provide either item_id or room_id'], 200);
-    // }
 
     public function addFeedback(Request $request)
     {
@@ -2073,70 +1767,6 @@ public function getItemDetails($itemId)
         ]);
     }
 
-    //     public function getRoomAfterCustomization($roomCustomizationId)
-    // {
-    //     // جلب تخصيص الغرفة مع جميع تخصيصات العناصر
-    //     $roomCustomization = RoomCustomization::with('customizationItems', 'room.items')->find($roomCustomizationId);
-
-    //     // التحقق من وجود تخصيص الغرفة
-    //     if (!$roomCustomization) {
-    //         return response()->json(['message' => 'Room customization not found'], 200);
-    //     }
-
-    //     // جلب جميع عناصر الغرفة
-    //     $roomItems = $roomCustomization->room->items;
-
-    //     // معالجة العناصر لتحديد إذا ما تم تخصيصها
-    //     $itemsWithCustomizationStatus = $roomItems->map(function ($item) use ($roomCustomization) {
-    //         // البحث عن تخصيص العنصر
-    //         $customization = $roomCustomization->customizationItems->firstWhere('item_id', $item->id);
-
-    //         if ($customization) {
-    //             // العنصر مخصص
-    //             return [
-    //                 'item_id' => $item->id,
-    //                 'item_name' => $item->name,
-    //                 'customized' => true,
-    //                 'wood_id' => $customization->wood_id,
-    //                 'wood_type' => $customization->wood->name ?? 'Not Specified',
-    //                 'wood_color' => $customization->wood_color,
-    //                 'fabric_id' => $customization->fabric_id,
-    //                 'fabric_type' => $customization->fabric->name ?? 'Not Specified',
-    //                 'fabric_color' => $customization->fabric_color,
-    //                 'add_to_length' => $customization->add_to_length,
-    //                 'add_to_width' => $customization->add_to_width,
-    //                 'add_to_height' => $customization->add_to_height,
-    //                 'final_price' => number_format($customization->final_price, 2),
-    //             ];
-    //         } else {
-    //             // العنصر غير مخصص
-    //             return [
-    //                 'item_id' => $item->id,
-    //                 'item_name' => $item->name,
-    //                 'customized' => false,
-    //                 'wood_id' => null,
-    //                 'wood_type' => null,
-    //                 'wood_color' => null,
-    //                 'fabric_id' => null,
-    //                 'fabric_type' => null,
-    //                 'fabric_color' => null,
-    //                 'add_to_length' => null,
-    //                 'add_to_width' => null,
-    //                 'add_to_height' => null,
-    //                 'final_price' => number_format($item->price, 2),
-    //             ];
-    //         }
-    //     });
-
-    //     // الرد مع تفاصيل تخصيص الغرفة والعناصر
-    //     return response()->json([
-    //         'message' => 'Room details with customization retrieved successfully!',
-    //         'room_id' => $roomCustomization->room_id,
-    //         'room_name' => $roomCustomization->room->name ?? 'Unknown Room',
-    //         'total_price' => number_format($roomCustomization->final_price, 2),
-    //         'items' => $itemsWithCustomizationStatus,
-    //     ]);
-    // }
 
     public function getRoomAfterCustomization($roomCustomizationId)
     {
@@ -2185,112 +1815,6 @@ public function getItemDetails($itemId)
         ]);
     }
 
-    // public function addToCart2(Request $request)
-    // {
-    //     $user = auth()->user();
-
-
-    //     if (!$request->hasAny(['item_id', 'room_id', 'customization_id', 'room_customization_id'])) {
-    //         return response()->json(['message' => 'Invalid request. Missing item_id, room_id, customization_id, or room_customization_id'], 200);
-    //     }
-
-
-
-    //     $count = (int) $request->input('count', 1);
-    //     if ($count <= 0) {
-    //         return response()->json(['message' => 'Count must be greater than 0'], 200);
-    //     }
-
-    //     $pricePerItem = 0;
-    //     $timePerItem = 0;
-    //     $itemId = $request->input('item_id');
-    //     $roomId = $request->input('room_id');
-    //     $customizationId = $request->input('customization_id');
-    //     $roomCustomizationId = $request->input('room_customization_id');
-
-    //     if ($itemId) {
-    //         $item = Item::find($itemId);
-    //         if (!$item) {
-    //             return response()->json(['message' => 'Item not found'], 200);
-    //         }
-
-    //         $pricePerItem = $item->price;
-    //         $timePerItem = $item->time;
-    //     } elseif ($roomId) {
-    //         $room = Room::with('items')->find($roomId);
-    //         if (!$room) {
-    //             return response()->json(['message' => 'Room not found'], 200);
-    //         }
-
-    //         $pricePerItem = $room->items->sum('price');
-    //         $timePerItem = $room->items->sum('time');
-    //     } elseif ($customizationId) {
-    //         $customization = Customization::find($customizationId);
-    //         if (!$customization) {
-    //             return response()->json(['message' => 'Customization not found'], 200);
-    //         }
-
-    //         $pricePerItem = $customization->final_price;
-
-    //         $item = Item::find($customization->item_id);
-    //         $timePerItem = $item ? $item->time : 0;
-    //     } elseif ($roomCustomizationId) {
-    //         $roomCustomization = RoomCustomization::with('customizationItems.item', 'room')->find($roomCustomizationId);
-    //         if (!$roomCustomization) {
-    //             return response()->json(['message' => 'Room Customization not found'], 200);
-    //         }
-
-
-
-    //         $pricePerItem += $roomCustomization->final_price ?? 0;
-    //         $timePerItem += $roomCustomization->final_time ?? 0;
-    //     }
-
-
-    //     $totalPrice = $pricePerItem * $count;
-    //     $totalTime = $timePerItem * $count;
-
-    //     $cartQuery = Cart::where('customer_id', $user->customer->id);
-
-    //     if ($itemId) {
-    //         $cartQuery->where('item_id', $itemId)->whereNull('room_id')->whereNull('customization_id')->whereNull('room_customization_id');
-    //     } elseif ($roomId) {
-    //         $cartQuery->where('room_id', $roomId)->whereNull('item_id')->whereNull('customization_id')->whereNull('room_customization_id');
-    //     } elseif ($customizationId) {
-    //         $cartQuery->where('customization_id', $customizationId)->whereNull('item_id')->whereNull('room_id')->whereNull('room_customization_id');
-    //     } elseif ($roomCustomizationId) {
-    //         $cartQuery->where('room_customization_id', $roomCustomizationId)->whereNull('item_id')->whereNull('room_id')->whereNull('customization_id');
-    //     }
-
-    //     $cart = $cartQuery->first();
-
-    //     if ($cart) {
-    //         // تحديث السجل
-    //         $newCount = $cart->count + $count;
-    //         $cart->count = $newCount;
-    //         $cart->price = $pricePerItem * $newCount;
-    //         $cart->time = $timePerItem * $newCount;
-    //         $cart->save();
-    //     } else {
-    //         $cart = Cart::create([
-    //             'customer_id' => $user->customer->id,
-    //             'item_id' => $itemId ?? null,
-    //             'room_id' => $roomId ?? null,
-    //             'customization_id' => $customizationId ? $customizationId : null,
-    //             'room_customization_id' => $roomCustomizationId ?? null,
-    //             'count' => $count,
-    //             'time_per_item' => $timePerItem,
-    //             'price_per_item' => $pricePerItem,
-    //             'time' => $totalTime,
-    //             'price' => $totalPrice,
-    //         ]);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Item/Room/Customization/RoomCustomization added or updated in cart successfully!',
-    //         'cart' => $cart
-    //     ]);
-    // }
 
     public function addToCart2(Request $request)
     {
@@ -2451,6 +1975,221 @@ public function getItemDetails($itemId)
         ]);
     }
 
+    public function confirmCart(Request $request)
+    {
+        $user = auth()->user();
+        $customerId = $user->customer->id;
+
+        $cartItems = Cart::where('customer_id', $customerId)->get();
+
+        if ($cartItems->isEmpty()) {
+            return response()->json(['message' => 'Your cart is empty'], 200);
+        }
+
+        $wantDelivery = $request->input('want_delivery');
+        if (!in_array($wantDelivery, ['yes', 'no'])) {
+            return response()->json(['message' => 'The field want_delivery is required and must be yes or no']);
+        }
+
+        if ($wantDelivery === 'yes') {
+            if (!$request->has(['latitude', 'longitude'])) {
+                return response()->json(['message' => 'Latitude and longitude are required when delivery is wanted.']);
+            }
+
+            if (!$request->has('address') || empty($request->input('address'))) {
+                return response()->json(['message' => 'Address is required when delivery is wanted.']);
+            }
+        }
+
+        $totalPrice = 0;
+        $totalTime = 0;
+
+        foreach ($cartItems as $cartItem) {
+            $totalPrice += $cartItem->price;
+            $totalTime += $cartItem->time;
+        }
+
+        // حساب الرعبون (50%)
+        $rabbon = $totalPrice * 0.5;
+
+        // السعر بعد الرعبون (بدون توصيل)
+        $priceAfterRabbon = $totalPrice - $rabbon;
+
+        // جلب سعر التوصيل بناء على العنوان لو بده توصيل
+        $deliveryPrice = 0;
+        if ($wantDelivery === 'yes') {
+            $placeCost = PlaceCost::where('place', $request->input('address'))->first();
+            if ($placeCost) {
+                $deliveryPrice = $placeCost->price;
+            }
+        }
+
+        // السعر بعد الرعبون مع التوصيل (لو مطلوب)
+        $priceAfterRabbonWithDelivery = $priceAfterRabbon + $deliveryPrice;
+
+        // المبلغ المتبقي بدون توصيل (نفسه السعر بعد الرعبون)
+        $remainingAmount = $priceAfterRabbon;
+
+        // المبلغ المتبقي مع توصيل (لو بده توصيل)
+        $remainingAmountWithDelivery = $wantDelivery === 'yes' ? $priceAfterRabbonWithDelivery : null;
+
+        $purchaseOrder = PurchaseOrder::create([
+            'customer_id'   => $customerId,
+            'total_price'   => $totalPrice,
+            'status'        => 'not_ready',
+            'is_paid'       => 'pending',
+            'is_recived'    => 'pending',
+            'want_delivery' => $wantDelivery,
+            'recive_date'   => $request->input('recive_date', now()),
+            'latitude'      => $request->input('latitude'),
+            'longitude'     => $request->input('longitude'),
+            'address'       => $request->input('address'),
+            'delivery_price' => $deliveryPrice, // خزّن سعر التوصيل داخل الطلب لو حبيت تستخدمه بعدين
+            'rabbon'        => $rabbon,
+        ]);
+
+        foreach ($cartItems as $cartItem) {
+            $countRequested = $cartItem->count;
+
+            if ($cartItem->item_id) {
+                $item = Item::find($cartItem->item_id);
+                if ($item) {
+                    $available = $item->count - $item->count_reserved;
+                    $shortage = max(0, $countRequested - $available);
+
+                    if ($shortage > 0) {
+                        WorkshopManagerRequest::create([
+                            'item_id'           => $item->id,
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'required_count'    => $shortage,
+                            'status'            => 'pending',
+                            'notes'             => 'Auto-generated due to item shortage',
+                        ]);
+                    }
+
+                    $purchaseOrder->item()->attach($item->id, [
+                        'count'          => $countRequested,
+                        'deposite_price' => $cartItem->price_per_item,
+                        'deposite_time'  => $cartItem->time_per_item,
+                        'delivery_time'  => $totalTime,
+                    ]);
+                }
+            }
+
+            if ($cartItem->room_id) {
+                $purchaseOrder->roomOrders()->create([
+                    'room_id'           => $cartItem->room_id,
+                    'count'             => $countRequested,
+                    'deposite_price'    => $cartItem->price_per_item,
+                    'deposite_time'     => $cartItem->time_per_item,
+                    'purchase_order_id' => $purchaseOrder->id,
+                ]);
+
+                $roomItems = Item::where('room_id', $cartItem->room_id)->get();
+                foreach ($roomItems as $roomItem) {
+                    $available = $roomItem->count - $roomItem->count_reserved;
+                    $shortage = max(0, $countRequested - $available);
+
+                    if ($shortage > 0) {
+                        WorkshopManagerRequest::create([
+                            'item_id'           => $roomItem->id,
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'required_count'    => $shortage,
+                            'status'            => 'pending',
+                            'notes'             => 'Auto-generated from room shortage',
+                        ]);
+                    }
+                }
+            }
+
+            if ($cartItem->customization_id) {
+                $purchaseOrder->customizationOrders()->create([
+                    'customization_id' => $cartItem->customization_id,
+                    'count'            => $countRequested,
+                    'deposite_price'   => $cartItem->price_per_item,
+                    'deposite_time'    => $cartItem->time_per_item,
+                ]);
+            }
+
+            if ($cartItem->room_customization_id) {
+                $purchaseOrder->roomCustomizationOrders()->create([
+                    'room_customization_id' => $cartItem->room_customization_id,
+                    'count'                 => $countRequested,
+                    'deposite_price'        => $cartItem->price_per_item,
+                    'deposite_time'         => $cartItem->time_per_item,
+                ]);
+            }
+
+            // إزالة العنصر من السلة
+            $cartItem->delete();
+        }
+
+        if ($request->has('available_times') && is_array($request->available_times)) {
+            foreach ($request->available_times as $availableTime) {
+                CustomerAvailableTime::create([
+                    'customer_id'        => $customerId,
+                    'purchase_order_id'  => $purchaseOrder->id,
+                    'available_at'       => $availableTime,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'Your order has been confirmed successfully!',
+            'order'   => $purchaseOrder,
+            'price_details' => [
+                'total_price' => $totalPrice,
+                'rabbon' => $rabbon,
+                'price_after_rabbon' => $priceAfterRabbon,
+                'delivery_price' => $deliveryPrice,
+                'price_after_rabbon_with_delivery' => $priceAfterRabbonWithDelivery,
+                'remaining_amount' => $remainingAmount,
+                'remaining_amount_with_delivery' => $remainingAmountWithDelivery,
+            ],
+        ]);
+    }
+
+
+    public function getNearestBranch()
+    {
+        $user = auth()->user();
+        $customer = $user->customer;
+
+        if (!$customer || !$customer->latitude || !$customer->longitude) {
+            return response()->json(['message' => 'Customer location data is missing.']);
+        }
+
+        $userLat = $customer->latitude;
+        $userLng = $customer->longitude;
+
+        // نستخدم صيغة Haversine لحساب أقرب فرع
+        $nearestBranch = Branch::selectRaw("*, 
+        (6371 * acos(cos(radians(?)) * cos(radians(latitude)) 
+        * cos(radians(longitude) - radians(?)) 
+        + sin(radians(?)) * sin(radians(latitude)))) AS distance", [
+            $userLat,
+            $userLng,
+            $userLat
+        ])
+            ->orderBy('distance')
+            ->first();
+
+        if (!$nearestBranch) {
+            return response()->json(['message' => 'No branches found.']);
+        }
+
+        return response()->json([
+            'message' => 'Nearest branch retrieved successfully.',
+            'branch' => [
+                'id'         => $nearestBranch->id,
+                'address'    => $nearestBranch->address,
+                'latitude'   => $nearestBranch->latitude,
+                'longitude'  => $nearestBranch->longitude,
+                'distance_km' => round($nearestBranch->distance, 2)
+            ]
+        ]);
+    }
+
     // public function confirmCart(Request $request)
     // {
     //     $user = auth()->user();
@@ -2459,19 +2198,17 @@ public function getItemDetails($itemId)
     //     $cartItems = Cart::where('customer_id', $customerId)->get();
 
     //     if ($cartItems->isEmpty()) {
-    //         return response()->json(['message' => 'Your cart is empty'], 200);
+    //         return response()->json(['message' => 'Your cart is empty']);
     //     }
 
-    //     // التحقق من خيار التوصيل
     //     $wantDelivery = $request->input('want_delivery');
     //     if (!in_array($wantDelivery, ['yes', 'no'])) {
-    //         return response()->json(['message' => 'The field want_delivery is required and must be yes or no'], 422);
+    //         return response()->json(['message' => 'The field want_delivery is required and must be yes or no']);
     //     }
 
-    //     // التحقق من خطوط الطول والعرض إذا طلب توصيل
     //     if ($wantDelivery === 'yes') {
     //         if (!$request->has(['latitude', 'longitude'])) {
-    //             return response()->json(['message' => 'Latitude and longitude are required when delivery is wanted.'], 422);
+    //             return response()->json(['message' => 'Latitude and longitude are required when delivery is wanted.']);
     //         }
     //     }
 
@@ -2483,6 +2220,30 @@ public function getItemDetails($itemId)
     //         $totalTime += $cartItem->time;
     //     }
 
+    //     $finalAvailableSlot = now();
+
+    //     if ($request->has('available_times') && is_array($request->available_times)) {
+    //         $companyAvailability = DeliveryCompanyAvailability::all();
+    //         $customerAvailableTimes = $request->available_times;
+    //         $existingOrders = PurchaseOrder::pluck('recive_date')->toArray();
+
+    //         foreach ($customerAvailableTimes as $time) {
+    //             $carbonTime = \Carbon\Carbon::parse($time);
+    //             $dayOfWeek = strtolower($carbonTime->format('l'));
+
+    //             $availableSlot = $companyAvailability->first(function ($availability) use ($dayOfWeek, $carbonTime) {
+    //                 return $availability->day_of_week === $dayOfWeek &&
+    //                     $carbonTime->format('H:i:s') >= $availability->start_time &&
+    //                     $carbonTime->format('H:i:s') <= $availability->end_time;
+    //             });
+
+    //             if ($availableSlot && !in_array($time, $existingOrders)) {
+    //                 $finalAvailableSlot = $time;
+    //                 break;
+    //             }
+    //         }
+    //     }
+
     //     $purchaseOrder = PurchaseOrder::create([
     //         'customer_id'   => $customerId,
     //         'total_price'   => $totalPrice,
@@ -2490,7 +2251,7 @@ public function getItemDetails($itemId)
     //         'is_paid'       => 'pending',
     //         'is_recived'    => 'pending',
     //         'want_delivery' => $wantDelivery,
-    //         'recive_date'   => $request->input('recive_date', now()),
+    //         'recive_date'   => $finalAvailableSlot,
     //         'latitude'      => $request->input('latitude'),
     //         'longitude'     => $request->input('longitude'),
     //     ]);
@@ -2567,11 +2328,9 @@ public function getItemDetails($itemId)
     //             ]);
     //         }
 
-    //         // إزالة العنصر من السلة
     //         $cartItem->delete();
     //     }
 
-    //     // تخزين الأوقات المتاحة إن وجدت
     //     if ($request->has('available_times') && is_array($request->available_times)) {
     //         foreach ($request->available_times as $availableTime) {
     //             CustomerAvailableTime::create([
@@ -2588,162 +2347,27 @@ public function getItemDetails($itemId)
     //     ]);
     // }
 
-    public function confirmCart(Request $request)
+
+
+
+    function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371)
     {
-        $user = auth()->user();
-        $customerId = $user->customer->id;
+        $latFrom = deg2rad($latitudeFrom);
+        $lonFrom = deg2rad($longitudeFrom);
+        $latTo = deg2rad($latitudeTo);
+        $lonTo = deg2rad($longitudeTo);
 
-        $cartItems = Cart::where('customer_id', $customerId)->get();
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
 
-        if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Your cart is empty']);
-        }
-
-        $wantDelivery = $request->input('want_delivery');
-        if (!in_array($wantDelivery, ['yes', 'no'])) {
-            return response()->json(['message' => 'The field want_delivery is required and must be yes or no'], 422);
-        }
-
-        if ($wantDelivery === 'yes') {
-            if (!$request->has(['latitude', 'longitude'])) {
-                return response()->json(['message' => 'Latitude and longitude are required when delivery is wanted.'], 422);
-            }
-        }
-
-        $totalPrice = 0;
-        $totalTime = 0;
-
-        foreach ($cartItems as $cartItem) {
-            $totalPrice += $cartItem->price;
-            $totalTime += $cartItem->time;
-        }
-
-        $finalAvailableSlot = now();
-
-        if ($request->has('available_times') && is_array($request->available_times)) {
-            $companyAvailability = DeliveryCompanyAvailability::all();
-            $customerAvailableTimes = $request->available_times;
-            $existingOrders = PurchaseOrder::pluck('recive_date')->toArray();
-
-            foreach ($customerAvailableTimes as $time) {
-                $carbonTime = \Carbon\Carbon::parse($time);
-                $dayOfWeek = strtolower($carbonTime->format('l'));
-
-                $availableSlot = $companyAvailability->first(function ($availability) use ($dayOfWeek, $carbonTime) {
-                    return $availability->day_of_week === $dayOfWeek &&
-                        $carbonTime->format('H:i:s') >= $availability->start_time &&
-                        $carbonTime->format('H:i:s') <= $availability->end_time;
-                });
-
-                if ($availableSlot && !in_array($time, $existingOrders)) {
-                    $finalAvailableSlot = $time;
-                    break;
-                }
-            }
-        }
-
-        $purchaseOrder = PurchaseOrder::create([
-            'customer_id'   => $customerId,
-            'total_price'   => $totalPrice,
-            'status'        => 'not_ready',
-            'is_paid'       => 'pending',
-            'is_recived'    => 'pending',
-            'want_delivery' => $wantDelivery,
-            'recive_date'   => $finalAvailableSlot,
-            'latitude'      => $request->input('latitude'),
-            'longitude'     => $request->input('longitude'),
-        ]);
-
-        foreach ($cartItems as $cartItem) {
-            $countRequested = $cartItem->count;
-
-            if ($cartItem->item_id) {
-                $item = Item::find($cartItem->item_id);
-                if ($item) {
-                    $available = $item->count - $item->count_reserved;
-                    $shortage = max(0, $countRequested - $available);
-
-                    if ($shortage > 0) {
-                        WorkshopManagerRequest::create([
-                            'item_id'           => $item->id,
-                            'purchase_order_id' => $purchaseOrder->id,
-                            'required_count'    => $shortage,
-                            'status'            => 'pending',
-                            'notes'             => 'Auto-generated due to item shortage',
-                        ]);
-                    }
-
-                    $purchaseOrder->item()->attach($item->id, [
-                        'count'          => $countRequested,
-                        'deposite_price' => $cartItem->price_per_item,
-                        'deposite_time'  => $cartItem->time_per_item,
-                        'delivery_time'  => $totalTime,
-                    ]);
-                }
-            }
-
-            if ($cartItem->room_id) {
-                $purchaseOrder->roomOrders()->create([
-                    'room_id'           => $cartItem->room_id,
-                    'count'             => $countRequested,
-                    'deposite_price'    => $cartItem->price_per_item,
-                    'deposite_time'     => $cartItem->time_per_item,
-                    'purchase_order_id' => $purchaseOrder->id,
-                ]);
-
-                $roomItems = Item::where('room_id', $cartItem->room_id)->get();
-                foreach ($roomItems as $roomItem) {
-                    $available = $roomItem->count - $roomItem->count_reserved;
-                    $shortage = max(0, $countRequested - $available);
-
-                    if ($shortage > 0) {
-                        WorkshopManagerRequest::create([
-                            'item_id'           => $roomItem->id,
-                            'purchase_order_id' => $purchaseOrder->id,
-                            'required_count'    => $shortage,
-                            'status'            => 'pending',
-                            'notes'             => 'Auto-generated from room shortage',
-                        ]);
-                    }
-                }
-            }
-
-            if ($cartItem->customization_id) {
-                $purchaseOrder->customizationOrders()->create([
-                    'customization_id' => $cartItem->customization_id,
-                    'count'            => $countRequested,
-                    'deposite_price'   => $cartItem->price_per_item,
-                    'deposite_time'    => $cartItem->time_per_item,
-                ]);
-            }
-
-            if ($cartItem->room_customization_id) {
-                $purchaseOrder->roomCustomizationOrders()->create([
-                    'room_customization_id' => $cartItem->room_customization_id,
-                    'count'                 => $countRequested,
-                    'deposite_price'        => $cartItem->price_per_item,
-                    'deposite_time'         => $cartItem->time_per_item,
-                ]);
-            }
-
-            $cartItem->delete();
-        }
-
-        if ($request->has('available_times') && is_array($request->available_times)) {
-            foreach ($request->available_times as $availableTime) {
-                CustomerAvailableTime::create([
-                    'customer_id'        => $customerId,
-                    'purchase_order_id'  => $purchaseOrder->id,
-                    'available_at'       => $availableTime,
-                ]);
-            }
-        }
-
-        return response()->json([
-            'message' => 'Your order has been confirmed successfully!',
-            'order'   => $purchaseOrder
-        ]);
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+            cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        return $angle * $earthRadius;
     }
+
+
+
+
 
     //Don't Test
     public function removePartialFromCart(Request $request)
@@ -3307,43 +2931,29 @@ public function getItemDetails($itemId)
 
         $discountedPrice = $originalPrice - ($originalPrice * ($discount->discount_percentage / 100));
 
-        $details = [
-            'discount_percentage' => $discount->discount_percentage,
-
-            'start_date' => [
-                'date_only' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
-                'full' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d H:i:s'),
-            ],
-            'end_date' => [
-                'date_only' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
-                'full' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d H:i:s'),
-            ],
-
+        $response = [
+            'id' => $discount->id,
             'original_price' => (float) number_format($originalPrice, 2, '.', ''),
             'discounted_price' => (float) number_format($discountedPrice, 2, '.', ''),
-        ];
-
-        if ($discount->room) {
-            $details['room_id'] = $discount->room->id;
-            $details['room_name'] = $discount->room->name;
-            $details['room_image'] = $discount->room->image_url;
-
-            $details['room_items'] = $discount->room->items->map(function ($item) {
+            'discount_percentage' => $discount->discount_percentage,
+            'item_id' => $discount->item ? $discount->item->id : null,
+            'item_img' => $discount->item ? $discount->item->image_url : null,
+            'item_name' => $discount->item ? $discount->item->name : null,
+            'room_id' => $discount->room ? $discount->room->id : null,
+            'room_img' => $discount->room ? $discount->room->image_url : null,
+            'room_name' => $discount->room ? $discount->room->name : null,
+            'start_date' => \Carbon\Carbon::parse($discount->start_date)->format('Y-m-d'),
+            'end_date' => \Carbon\Carbon::parse($discount->end_date)->format('Y-m-d'),
+            'room_items' => $discount->room ? $discount->room->items->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'name' => $item->name,
                     'price' => (float) number_format($item->price, 2, '.', ''),
                     'image_url' => $item->image_url,
                 ];
-            })->toArray();
-        }
+            })->toArray() : [],
+        ];
 
-        if ($discount->item) {
-            $details['item_id'] = $discount->item->id;
-            $details['item_name'] = $discount->item->name;
-            $details['item_image'] = $discount->item->image_url;
-        }
-
-        return response()->json($details);
+        return response()->json($response);
     }
 }

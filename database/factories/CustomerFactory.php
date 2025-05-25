@@ -28,7 +28,9 @@ class CustomerFactory extends Factory
             'latitude' => $this->faker->latitude,
             'longitude' => $this->faker->longitude,
             'phone_number' => $this->faker->unique()->phoneNumber,
-            'profile_image' => 'profile/' . $randomImage,  // إضافة الصورة العشوائية
+            'profile_image' => 'profile/' . $randomImage,
+            'address' => $this->faker->address,
+
         ];
     }
 }

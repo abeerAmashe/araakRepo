@@ -138,4 +138,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/getRoomDetails/{room_id}', [CustomerController::class, 'getRoomDetails']);
     Route::get('/cart_details', [CustomerController::class, 'getCartDetails']);
     Route::post('/addToCartFavorite', [CustomerController::class, 'addToCartFavorite']);
+    Route::get('/nearest-branch', [CustomerController::class, 'getNearestBranch']);
+
 });

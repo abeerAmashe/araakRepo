@@ -21,7 +21,9 @@ class PurchaseOrder extends Model
         'recive_date',
         'latitude',
         'longitude',
-        'delivery_time'
+        'delivery_time',
+        'address',
+        'delivery_price'
     ];
 
 

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('phone_number');
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('profile_image')->nullable();
+            $table->string('address')->nullable();
             $table->timestamps();
         });
     }

@@ -11,7 +11,9 @@ class Branch extends Model
 
     protected $fillable = [
         'id ',
-        'location'
+        'address',
+        'latitude',
+        'longitude'
     ];
 
     public function room()

@@ -24,6 +24,8 @@ return new class extends Migration
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->dateTime('delivery_time')->nullable();
+            $table->string('address');
+            $table->decimal('delivery_price', 8, 2)->default(0);
             $table->timestamps();
         });
     }
