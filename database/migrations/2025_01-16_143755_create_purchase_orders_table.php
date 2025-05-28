@@ -26,6 +26,14 @@ return new class extends Migration
             $table->dateTime('delivery_time')->nullable();
             $table->string('address');
             $table->decimal('delivery_price', 8, 2)->default(0);
+            $table->float('rabbon')->nullable();
+            $table->float('price_after_rabbon')->nullable();
+            $table->float('price_after_rabbon_with_delivery')->nullable();
+            //المبلغ المتبقي بدون التوصيل
+            $table->float('remaining_amount')->nullable();
+            // المبلغ المتبقي مع التوصيل
+            $table->float('remaining_amount_with_delivery')->nullable();
+            $table->foreignId('branch_id')->constrained('branchs')->cascadeOnDelete();
             $table->timestamps();
         });
     }

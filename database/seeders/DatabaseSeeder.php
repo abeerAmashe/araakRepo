@@ -56,10 +56,11 @@ class DatabaseSeeder extends Seeder
             LikeSeeder::class,
             RatingSeeder::class,
             ItemSeeder::class,
-
             FixRoomRelationsSeeder::class,
             CartSeeder::class,
             DiscountSeeder::class,
+            GallaryManagerSeeder::class
+
 
         ]);
     }

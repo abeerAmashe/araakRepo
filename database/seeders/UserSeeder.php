@@ -10,12 +10,19 @@ class UserSeeder extends Seeder
 {
     public function run()
     {
-        User::create([
+        $user= User::create([
             'name' => 'Abeer',
             'email' => 'abeer@example.com',
             'password' => Hash::make('password123'),
         ]);
 
-        User::factory()->count(9)->create(); 
+        $user->wallets()->create([
+            'balance' => 0.00,
+            'currency' => 'usd',
+            'wallet_type' => 'investment',
+            'is_active' => true,
+        ]);
+
+        User::factory()->count(9)->create();
     }
 }

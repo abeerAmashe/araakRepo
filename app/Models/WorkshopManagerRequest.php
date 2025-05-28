@@ -17,6 +17,7 @@ class WorkshopManagerRequest extends Model
         'customization_id',
         'room_customization_id',                
         'required_count',   
+        'branch_id'
     ];
 
     public function purchaseOrder()

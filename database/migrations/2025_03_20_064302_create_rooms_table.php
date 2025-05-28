@@ -18,8 +18,8 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
             $table->string('image_url')->nullable();
             $table->integer('count_reserved')->default(0);
-            $table->integer('time')->default(0);
-            $table->integer('price')->default(0);
+            $table->decimal('time')->default(0);
+            $table->decimal('price')->default(0);
             $table->integer('count')->default(0);
             $table->string('wood_type');
             $table->string('wood_color');

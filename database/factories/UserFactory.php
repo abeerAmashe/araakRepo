@@ -18,4 +18,17 @@ class UserFactory extends Factory
             'password' => Hash::make('123456789'),
         ];
     }
+
+    public function configure()
+{
+    return $this->afterCreating(function (User $user) {
+        $user->wallets()->create([
+            'balance' => 0.00,
+            'currency' => 'usd',
+            'wallet_type' => 'investment',
+            'is_active' => true,
+        ]);
+    });
+}
+
 }

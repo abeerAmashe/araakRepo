@@ -34,6 +34,14 @@ class AuthController extends Controller
         $input['password'] = Hash::make($input['password']);
         $user = User::create($input);
 
+
+        $user->wallets()->create([
+            'balance' => 0.00,
+            'currency' => 'usd',
+            'wallet_type' => 'investment',
+            'is_active' => true,
+        ]);
+
         if ($request->hasFile('profile_image')) {
             $imageName = time() . '.' . $request->file('profile_image')->getClientOriginalExtension();
 

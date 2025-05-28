@@ -16,17 +16,21 @@ use App\Models\DeliverySlot;
 use App\Models\Discount;
 use App\Models\Fabric;
 use App\Models\Favorite;
+use App\Models\GallaryManager;
 use App\Models\Item;
 use App\Models\ItemDetail;
 use App\Models\ItemOrder;
 use App\Models\ItemType;
 use App\Models\Like;
+use App\Models\PlaceCost;
 use App\Models\PurchaseOrder;
 use App\Models\Rating;
 use App\Models\Room;
 use App\Models\RoomCustomization;
 use App\Models\RoomCustomizationItem;
 use App\Models\RoomOrder;
+use App\Models\StripePayment;
+use App\Models\Transaction;
 use App\Models\Wood;
 use App\Models\WorkshopManagerRequest;
 use Illuminate\Http\Request;
@@ -42,6 +46,7 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Wallet;
 
 
 
@@ -1057,6 +1062,59 @@ class CustomerController extends Controller
         ]);
     }
 
+    // public function updateProfile(Request $request)
+    // {
+    //     $user = auth()->user();
+    //     $customer = $user->customer;
+
+    //     if (!$user || !$customer) {
+    //         return response()->json(['message' => 'User not authenticated or not a customer'], 200);
+    //     }
+
+    //     $validator = Validator::make($request->all(), [
+    //         'name' => 'sometimes|string|max:255',
+    //         'profile_image' => 'sometimes|image|mimes:jpg,jpeg,png|max:5120',
+    //         'current_password' => 'sometimes|required_with:new_password',
+    //         'new_password' => 'sometimes|required_with:current_password|min:6|confirmed',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json(['errors' => $validator->errors()]);
+    //     }
+
+    //     if ($request->has('name')) {
+    //         $user->name = $request->name;
+    //         $user->save();
+    //     }
+
+    //     if ($request->hasFile('profile_image')) {
+    //         $image = $request->file('profile_image');
+    //         $imageName = time() . '.' . $image->getClientOriginalExtension();
+
+    //         $destinationPath = public_path('profile');
+    //         $image->move($destinationPath, $imageName);
+
+    //         $customer->profile_image = url('profile/' . $imageName);
+    //         $customer->save();
+    //     }
+
+    //     if ($request->filled('current_password') && $request->filled('new_password')) {
+    //         if (!Hash::check($request->current_password, $user->password)) {
+    //             return response()->json(['message' => 'Current password is incorrect'], 200);
+    //         }
+    //         $user->password = Hash::make($request->new_password);
+    //         $user->save();
+    //     }
+
+    //     return response()->json([
+    //         'message' => 'Profile updated successfully',
+    //         'name' => $user->name,
+    //         'profile_image' => $customer->profile_image,
+    //     ]);
+    // }
+
+
+
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
@@ -1068,6 +1126,7 @@ class CustomerController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
+            'phone_number' => 'sometimes|string|max:20',
             'profile_image' => 'sometimes|image|mimes:jpg,jpeg,png|max:5120',
             'current_password' => 'sometimes|required_with:new_password',
             'new_password' => 'sometimes|required_with:current_password|min:6|confirmed',
@@ -1080,6 +1139,11 @@ class CustomerController extends Controller
         if ($request->has('name')) {
             $user->name = $request->name;
             $user->save();
+        }
+
+        if ($request->has('phone_number')) {
+            $customer->phone_number = $request->phone_number;
+            $customer->save();
         }
 
         if ($request->hasFile('profile_image')) {
@@ -1104,6 +1168,7 @@ class CustomerController extends Controller
         return response()->json([
             'message' => 'Profile updated successfully',
             'name' => $user->name,
+            'phone_number' => $customer->phone_number,
             'profile_image' => $customer->profile_image,
         ]);
     }
@@ -1856,7 +1921,6 @@ class CustomerController extends Controller
         if ($itemId) {
             $item = Item::find($itemId);
             if (!$item) return response()->json(['message' => 'Item not found'], 200);
-
             $availableCount = $item->count - $item->count_reserved;
             $pricePerItem = (float) $item->price;
             $timePerItem = (float) $item->time;
@@ -1907,37 +1971,25 @@ class CustomerController extends Controller
                 ]);
             }
         } elseif ($roomId) {
-            $room = Room::with('items')->find($roomId);
-            if (!$room) return response()->json(['message' => 'Room not found'], 200);
-
-            $roomPricePerItem = 0.0;
-            $roomTimePerItem = 0.0;
-
-            foreach ($room->items as $roomItem) {
-                $roomPricePerItem += $roomItem->price;
-                $roomTimePerItem += $roomItem->time;
+            $room = Room::find($roomId);
+            if (!$room) {
+                return response()->json(['message' => 'Room not found'], 200);
             }
 
-            $partialTime = 0.0;
+            $roomPricePerItem = (float) $room->price; // السعر من جدول rooms
+            $roomTimePerItem = (float) $room->time;   // الوقت من جدول rooms
 
-            foreach ($room->items as $roomItem) {
-                $available = $roomItem->count - $roomItem->count_reserved;
-                $missing = max(0, $count - $available);
-                $partialTime += $missing * $roomItem->time;
+            $cartQuery->where('room_id', $roomId)
+                ->whereNull('item_id')
+                ->whereNull('customization_id')
+                ->whereNull('room_customization_id');
 
-                if ($available > 0) {
-                    $roomItem->count_reserved += min($count, $available);
-                    $roomItem->save();
-                }
-            }
-
-            $cartQuery->where('room_id', $roomId)->whereNull('item_id')->whereNull('customization_id')->whereNull('room_customization_id');
             $cart = $cartQuery->first();
 
             if ($cart) {
                 $cart->count += $count;
                 $cart->price = $roomPricePerItem * $cart->count;
-                $cart->time += $partialTime;
+                $cart->time = $roomTimePerItem * $cart->count;
                 $cart->time_per_item = $roomTimePerItem;
                 $cart->price_per_item = $roomPricePerItem;
                 $cart->reserved_at = now();
@@ -1949,7 +2001,7 @@ class CustomerController extends Controller
                     'count' => $count,
                     'time_per_item' => $roomTimePerItem,
                     'price_per_item' => $roomPricePerItem,
-                    'time' => $partialTime,
+                    'time' => $roomTimePerItem * $count,
                     'price' => $roomPricePerItem * $count,
                     'reserved_at' => now(),
                 ]);
@@ -1958,6 +2010,7 @@ class CustomerController extends Controller
             $pricePerItem = $roomPricePerItem;
             $timePerItem = $roomTimePerItem;
         }
+
 
         $cartItems = Cart::where('customer_id', $customerId)->get();
         $totalCartPrice = $cartItems->sum('price');
@@ -1970,10 +2023,76 @@ class CustomerController extends Controller
             'total_time' => $totalCartTime,
             'total_price' => $totalCartPrice,
             'deposit' => $depositAmount,
-            'item_time' => $partialTime,
+            'item_time' => $timePerItem,
             'item_price' => $pricePerItem * $count,
         ]);
     }
+
+
+
+    public function getNearestBranch(Request $request)
+    {
+        $userLat = $request->input('latitude');
+        $userLng = $request->input('longitude');
+
+        if (!$userLat || !$userLng) {
+            return response()->json(['message' => 'Latitude and longitude are required.'], 422);
+        }
+
+        $nearestBranch = Branch::selectRaw("*, 
+        (6371 * acos(cos(radians(?)) * cos(radians(latitude)) 
+        * cos(radians(longitude) - radians(?)) 
+        + sin(radians(?)) * sin(radians(latitude)))) AS distance", [
+            $userLat,
+            $userLng,
+            $userLat
+        ])
+            ->orderBy('distance')
+            ->first();
+
+        if (!$nearestBranch) {
+            return response()->json(['message' => 'No branches found.'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Nearest branch retrieved successfully.',
+            'branch' => [
+                'id'          => $nearestBranch->id,
+                'address'     => $nearestBranch->address,
+                'latitude'    => $nearestBranch->latitude,
+                'longitude'   => $nearestBranch->longitude,
+                'distance_km' => round($nearestBranch->distance, 2),
+            ]
+        ]);
+    }
+
+    public function getDeliveryPrice(Request $request)
+    {
+        $request->validate([
+            'address'   => 'required|string',
+            'latitude'  => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        $deliveryPrice = 0;
+
+        $placeCost = PlaceCost::where('place', $request->input('address'))->first();
+
+        if ($placeCost) {
+            $deliveryPrice = $placeCost->price;
+        } else {
+            return response()->json([
+                'message' => 'Delivery price not found for the given address.',
+                'delivery_price' => null
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Delivery price retrieved successfully.',
+            'delivery_price' => $deliveryPrice
+        ]);
+    }
+
 
     public function confirmCart(Request $request)
     {
@@ -2009,43 +2128,88 @@ class CustomerController extends Controller
             $totalTime += $cartItem->time;
         }
 
-        // حساب الرعبون (50%)
         $rabbon = $totalPrice * 0.5;
-
-        // السعر بعد الرعبون (بدون توصيل)
         $priceAfterRabbon = $totalPrice - $rabbon;
 
-        // جلب سعر التوصيل بناء على العنوان لو بده توصيل
+        $wallet = $user->wallets->first();
+
+        if (!$wallet || $wallet->balance < $rabbon) {
+            // return $rabbon;
+            return response()->json(['message' => 'Insufficient balance to pay the deposit (rabbon)'], 200);
+        }
+
+        // خصم الرعبون من محفظة الزبون
+        $wallet->balance -= $rabbon;
+        $wallet->save();
+
+        $manager = GallaryManager::with('user')->first();
+        $user = $manager?->user;
+        if (!$manager || !$manager->user->wallets) {
+            return response()->json(['message' => 'Manager wallet not found'], 500);
+        }
+        $managerWallet = $manager->user->wallets->first();
+        $managerWallet->balance += $rabbon;
+        $managerWallet->save();
+
         $deliveryPrice = 0;
+        $nearestBranch = null;
+
         if ($wantDelivery === 'yes') {
-            $placeCost = PlaceCost::where('place', $request->input('address'))->first();
-            if ($placeCost) {
-                $deliveryPrice = $placeCost->price;
+            $deliveryRequest = new \Illuminate\Http\Request([
+                'address' => $request->input('address'),
+                'latitude' => $request->input('latitude'),
+                'longitude' => $request->input('longitude'),
+            ]);
+
+            $deliveryResponse = $this->getDeliveryPrice($deliveryRequest);
+            $responseData = $deliveryResponse->getData(true);
+
+            $responseData = $deliveryResponse->getData(true);
+
+            if ($deliveryResponse->getStatusCode() === 200) {
+                $deliveryPrice = $responseData['delivery_price'];
+            } else {
+                return response()->json(['message' => $responseData['message']]);
+            }
+        } else {
+            $branchRequest = new \Illuminate\Http\Request([
+                'latitude' => $request->input('latitude'),
+                'longitude' => $request->input('longitude'),
+            ]);
+
+            $branchResponse = $this->getNearestBranch($branchRequest);
+
+            $responseData = $branchResponse->getData(true);
+
+            if ($branchResponse->getStatusCode() === 200) {
+                $nearestBranch = $responseData['branch'];
+            } else {
+                return response()->json(['message' => $responseData['message']]);
             }
         }
 
-        // السعر بعد الرعبون مع التوصيل (لو مطلوب)
         $priceAfterRabbonWithDelivery = $priceAfterRabbon + $deliveryPrice;
-
-        // المبلغ المتبقي بدون توصيل (نفسه السعر بعد الرعبون)
         $remainingAmount = $priceAfterRabbon;
-
-        // المبلغ المتبقي مع توصيل (لو بده توصيل)
         $remainingAmountWithDelivery = $wantDelivery === 'yes' ? $priceAfterRabbonWithDelivery : null;
 
         $purchaseOrder = PurchaseOrder::create([
-            'customer_id'   => $customerId,
-            'total_price'   => $totalPrice,
-            'status'        => 'not_ready',
-            'is_paid'       => 'pending',
-            'is_recived'    => 'pending',
-            'want_delivery' => $wantDelivery,
-            'recive_date'   => $request->input('recive_date', now()),
-            'latitude'      => $request->input('latitude'),
-            'longitude'     => $request->input('longitude'),
-            'address'       => $request->input('address'),
-            'delivery_price' => $deliveryPrice, // خزّن سعر التوصيل داخل الطلب لو حبيت تستخدمه بعدين
-            'rabbon'        => $rabbon,
+            'customer_id'                       => $customerId,
+            'total_price'                       => $totalPrice,
+            'status'                            => 'not_ready',
+            'is_paid'                           => 'pending',
+            'is_recived'                        => 'pending',
+            'want_delivery'                    => $wantDelivery,
+            'recive_date'                       => $request->input('recive_date', now()),
+            'latitude'                          => $request->input('latitude'),
+            'longitude'                         => $request->input('longitude'),
+            'address'                           => $request->input('address'),
+            'delivery_price'                    => $deliveryPrice,
+            'rabbon'                            => $rabbon,
+            'price_after_rabbon'               => $priceAfterRabbon,
+            'price_after_rabbon_with_delivery' => $wantDelivery === 'yes' ? $priceAfterRabbonWithDelivery : null,
+            'remaining_amount'                 => $remainingAmount,
+            'remaining_amount_with_delivery'   => $remainingAmountWithDelivery,
+            'branch_id'                        => $wantDelivery === 'no' && $nearestBranch ? $nearestBranch['id'] : null,
         ]);
 
         foreach ($cartItems as $cartItem) {
@@ -2102,250 +2266,112 @@ class CustomerController extends Controller
                 }
             }
 
-            if ($cartItem->customization_id) {
-                $purchaseOrder->customizationOrders()->create([
-                    'customization_id' => $cartItem->customization_id,
-                    'count'            => $countRequested,
-                    'deposite_price'   => $cartItem->price_per_item,
-                    'deposite_time'    => $cartItem->time_per_item,
-                ]);
-            }
+            // if ($cartItem->customization_id) {
+            //     $purchaseOrder->customizationOrders()->create([
+            //         'customization_id' => $cartItem->customization_id,
+            //         'count'            => $countRequested,
+            //         'deposite_price'   => $cartItem->price_per_item,
+            //         'deposite_time'    => $cartItem->time_per_item,
+            //     ]);
+            // }
 
-            if ($cartItem->room_customization_id) {
-                $purchaseOrder->roomCustomizationOrders()->create([
-                    'room_customization_id' => $cartItem->room_customization_id,
-                    'count'                 => $countRequested,
-                    'deposite_price'        => $cartItem->price_per_item,
-                    'deposite_time'         => $cartItem->time_per_item,
-                ]);
-            }
+            // if ($cartItem->room_customization_id) {
+            // $purchaseOrder->roomCustomizationOrders()->create([
+            //     'room_customization_id' => $cartItem->room_customization_id,
+            //     'count'                 => $countRequested,
+            //     'deposite_price'        => $cartItem->price_per_item,
+            //     'deposite_time'         => $cartItem->time_per_item,
+            // ]);
+            // }
 
-            // إزالة العنصر من السلة
             $cartItem->delete();
         }
 
-        if ($request->has('available_times') && is_array($request->available_times)) {
-            foreach ($request->available_times as $availableTime) {
-                CustomerAvailableTime::create([
-                    'customer_id'        => $customerId,
-                    'purchase_order_id'  => $purchaseOrder->id,
-                    'available_at'       => $availableTime,
-                ]);
-            }
-        }
+        // if ($request->has('available_times') && is_array($request->available_times)) {
+        //     foreach ($request->available_times as $availableTime) {
+        //         CustomerAvailableTime::create([
+        //             'customer_id'       => $customerId,
+        //             'purchase_order_id' => $purchaseOrder->id,
+        //             'available_at'      => $availableTime,
+        //         ]);
+        //     }
+        // }
 
         return response()->json([
             'message' => 'Your order has been confirmed successfully!',
             'order'   => $purchaseOrder,
             'price_details' => [
-                'total_price' => $totalPrice,
-                'rabbon' => $rabbon,
-                'price_after_rabbon' => $priceAfterRabbon,
-                'delivery_price' => $deliveryPrice,
+                'total_price'                     => $totalPrice,
+                'rabbon'                          => $rabbon,
+                'price_after_rabbon'              => $priceAfterRabbon,
+                'delivery_price'                  => $deliveryPrice,
                 'price_after_rabbon_with_delivery' => $priceAfterRabbonWithDelivery,
-                'remaining_amount' => $remainingAmount,
-                'remaining_amount_with_delivery' => $remainingAmountWithDelivery,
+                'remaining_amount'                => $remainingAmount,
+                'remaining_amount_with_delivery'  => $remainingAmountWithDelivery,
             ],
+            'nearest_branch' => $nearestBranch,
         ]);
     }
 
-
-    public function getNearestBranch()
+    public function ChargeInvestmentWallet(Request $request)
     {
-        $user = auth()->user();
-        $customer = $user->customer;
-
-        if (!$customer || !$customer->latitude || !$customer->longitude) {
-            return response()->json(['message' => 'Customer location data is missing.']);
-        }
-
-        $userLat = $customer->latitude;
-        $userLng = $customer->longitude;
-
-        // نستخدم صيغة Haversine لحساب أقرب فرع
-        $nearestBranch = Branch::selectRaw("*, 
-        (6371 * acos(cos(radians(?)) * cos(radians(latitude)) 
-        * cos(radians(longitude) - radians(?)) 
-        + sin(radians(?)) * sin(radians(latitude)))) AS distance", [
-            $userLat,
-            $userLng,
-            $userLat
-        ])
-            ->orderBy('distance')
-            ->first();
-
-        if (!$nearestBranch) {
-            return response()->json(['message' => 'No branches found.']);
-        }
-
-        return response()->json([
-            'message' => 'Nearest branch retrieved successfully.',
-            'branch' => [
-                'id'         => $nearestBranch->id,
-                'address'    => $nearestBranch->address,
-                'latitude'   => $nearestBranch->latitude,
-                'longitude'  => $nearestBranch->longitude,
-                'distance_km' => round($nearestBranch->distance, 2)
-            ]
+        $request->validate([
+            'token' => 'required|string',
+            'amount' => 'required|numeric|min:1',
+            'description' => 'nullable|string',
+            'payment_method' => 'required|string',
+            'currency' => 'nullable|string',
         ]);
+
+        try {
+            $user = auth()->user();
+            $wallet = $user->wallets()->where('wallet_type', 'investment')->first();
+
+            if (!$wallet) {
+                return response()->json(['message' => 'Wallet not found'], 404);
+            }
+
+            $stripe = new \Stripe\StripeClient(env('STRIPE_SECRET'));
+
+            $charge = $stripe->charges->create([
+                'amount' => $request->amount,
+                'currency' => $request->currency ?? 'usd',
+                'source' => $request->token,
+                'description' => $request->description ?? 'Wallet top-up',
+            ]);
+
+            $amountInDollars = $request->amount;
+
+            DB::transaction(function () use ($user, $wallet, $charge, $amountInDollars, $request) {
+                $transaction = Transaction::create([
+                    'user_id' => $user->id,
+                    'wallet_id' => $wallet->id,
+                    'amount' => $amountInDollars,
+                    'type' => 'deposit',
+                    'status' => 'completed',
+                    'stripe_payment_id' => $charge->id,
+                ]);
+
+                StripePayment::create([
+                    'transaction_id' => $transaction->id,
+                    'payment_intent_id' => $charge->id,
+                    'amount' => $amountInDollars,
+                    'currency' => $charge->currency,
+                    'payment_method' => $charge->payment_method ?? $request->payment_method,
+                    'status' => $charge->status,
+                    'receipt_url' => $charge->receipt_url ?? null,
+                ]);
+
+                $wallet->increment('balance', $amountInDollars);
+            });
+
+            return response()->json(['message' => 'Wallet charged successfully.']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Payment failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
-
-    // public function confirmCart(Request $request)
-    // {
-    //     $user = auth()->user();
-    //     $customerId = $user->customer->id;
-
-    //     $cartItems = Cart::where('customer_id', $customerId)->get();
-
-    //     if ($cartItems->isEmpty()) {
-    //         return response()->json(['message' => 'Your cart is empty']);
-    //     }
-
-    //     $wantDelivery = $request->input('want_delivery');
-    //     if (!in_array($wantDelivery, ['yes', 'no'])) {
-    //         return response()->json(['message' => 'The field want_delivery is required and must be yes or no']);
-    //     }
-
-    //     if ($wantDelivery === 'yes') {
-    //         if (!$request->has(['latitude', 'longitude'])) {
-    //             return response()->json(['message' => 'Latitude and longitude are required when delivery is wanted.']);
-    //         }
-    //     }
-
-    //     $totalPrice = 0;
-    //     $totalTime = 0;
-
-    //     foreach ($cartItems as $cartItem) {
-    //         $totalPrice += $cartItem->price;
-    //         $totalTime += $cartItem->time;
-    //     }
-
-    //     $finalAvailableSlot = now();
-
-    //     if ($request->has('available_times') && is_array($request->available_times)) {
-    //         $companyAvailability = DeliveryCompanyAvailability::all();
-    //         $customerAvailableTimes = $request->available_times;
-    //         $existingOrders = PurchaseOrder::pluck('recive_date')->toArray();
-
-    //         foreach ($customerAvailableTimes as $time) {
-    //             $carbonTime = \Carbon\Carbon::parse($time);
-    //             $dayOfWeek = strtolower($carbonTime->format('l'));
-
-    //             $availableSlot = $companyAvailability->first(function ($availability) use ($dayOfWeek, $carbonTime) {
-    //                 return $availability->day_of_week === $dayOfWeek &&
-    //                     $carbonTime->format('H:i:s') >= $availability->start_time &&
-    //                     $carbonTime->format('H:i:s') <= $availability->end_time;
-    //             });
-
-    //             if ($availableSlot && !in_array($time, $existingOrders)) {
-    //                 $finalAvailableSlot = $time;
-    //                 break;
-    //             }
-    //         }
-    //     }
-
-    //     $purchaseOrder = PurchaseOrder::create([
-    //         'customer_id'   => $customerId,
-    //         'total_price'   => $totalPrice,
-    //         'status'        => 'not_ready',
-    //         'is_paid'       => 'pending',
-    //         'is_recived'    => 'pending',
-    //         'want_delivery' => $wantDelivery,
-    //         'recive_date'   => $finalAvailableSlot,
-    //         'latitude'      => $request->input('latitude'),
-    //         'longitude'     => $request->input('longitude'),
-    //     ]);
-
-    //     foreach ($cartItems as $cartItem) {
-    //         $countRequested = $cartItem->count;
-
-    //         if ($cartItem->item_id) {
-    //             $item = Item::find($cartItem->item_id);
-    //             if ($item) {
-    //                 $available = $item->count - $item->count_reserved;
-    //                 $shortage = max(0, $countRequested - $available);
-
-    //                 if ($shortage > 0) {
-    //                     WorkshopManagerRequest::create([
-    //                         'item_id'           => $item->id,
-    //                         'purchase_order_id' => $purchaseOrder->id,
-    //                         'required_count'    => $shortage,
-    //                         'status'            => 'pending',
-    //                         'notes'             => 'Auto-generated due to item shortage',
-    //                     ]);
-    //                 }
-
-    //                 $purchaseOrder->item()->attach($item->id, [
-    //                     'count'          => $countRequested,
-    //                     'deposite_price' => $cartItem->price_per_item,
-    //                     'deposite_time'  => $cartItem->time_per_item,
-    //                     'delivery_time'  => $totalTime,
-    //                 ]);
-    //             }
-    //         }
-
-    //         if ($cartItem->room_id) {
-    //             $purchaseOrder->roomOrders()->create([
-    //                 'room_id'           => $cartItem->room_id,
-    //                 'count'             => $countRequested,
-    //                 'deposite_price'    => $cartItem->price_per_item,
-    //                 'deposite_time'     => $cartItem->time_per_item,
-    //                 'purchase_order_id' => $purchaseOrder->id,
-    //             ]);
-
-    //             $roomItems = Item::where('room_id', $cartItem->room_id)->get();
-    //             foreach ($roomItems as $roomItem) {
-    //                 $available = $roomItem->count - $roomItem->count_reserved;
-    //                 $shortage = max(0, $countRequested - $available);
-
-    //                 if ($shortage > 0) {
-    //                     WorkshopManagerRequest::create([
-    //                         'item_id'           => $roomItem->id,
-    //                         'purchase_order_id' => $purchaseOrder->id,
-    //                         'required_count'    => $shortage,
-    //                         'status'            => 'pending',
-    //                         'notes'             => 'Auto-generated from room shortage',
-    //                     ]);
-    //                 }
-    //             }
-    //         }
-
-    //         if ($cartItem->customization_id) {
-    //             $purchaseOrder->customizationOrders()->create([
-    //                 'customization_id' => $cartItem->customization_id,
-    //                 'count'            => $countRequested,
-    //                 'deposite_price'   => $cartItem->price_per_item,
-    //                 'deposite_time'    => $cartItem->time_per_item,
-    //             ]);
-    //         }
-
-    //         if ($cartItem->room_customization_id) {
-    //             $purchaseOrder->roomCustomizationOrders()->create([
-    //                 'room_customization_id' => $cartItem->room_customization_id,
-    //                 'count'                 => $countRequested,
-    //                 'deposite_price'        => $cartItem->price_per_item,
-    //                 'deposite_time'         => $cartItem->time_per_item,
-    //             ]);
-    //         }
-
-    //         $cartItem->delete();
-    //     }
-
-    //     if ($request->has('available_times') && is_array($request->available_times)) {
-    //         foreach ($request->available_times as $availableTime) {
-    //             CustomerAvailableTime::create([
-    //                 'customer_id'        => $customerId,
-    //                 'purchase_order_id'  => $purchaseOrder->id,
-    //                 'available_at'       => $availableTime,
-    //             ]);
-    //         }
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Your order has been confirmed successfully!',
-    //         'order'   => $purchaseOrder
-    //     ]);
-    // }
 
 
 
@@ -2531,7 +2557,6 @@ class CustomerController extends Controller
                         $needed = $cartItem->count;
 
                         if ($available >= $needed) {
-                            // لا مشكلة
                             continue;
                         } elseif ($available > 0) {
                             $missing = $needed - $available;
@@ -2624,71 +2649,6 @@ class CustomerController extends Controller
     }
 
 
-
-    // public function filterItemsWithType(Request $request)
-    // {
-    //     $request->validate([
-    //         'type_name' => 'required|string',
-    //         'fabric_color' => 'nullable|string',
-    //         'fabric_name' => 'nullable|string',
-    //         'wood_name' => 'nullable|string',
-    //         'price' => 'nullable|numeric',
-    //     ]);
-
-    //     // جلب الأنواع المطابقة
-    //     $types = ItemType::where('name', 'like', '%' . $request->type_name . '%')->get();
-
-    //     if ($types->isEmpty()) {
-    //         return response()->json(['message' => 'Type not found'], 200);
-    //     }
-
-    //     // فلترة العناصر المرتبطة بالأنواع
-    //     $query = Item::whereIn('item_type_id', $types->pluck('id'))
-    //         ->with(['itemType', 'itemDetail.fabric', 'itemDetail.wood']);
-
-    //     if ($request->price) {
-    //         $query->where('price', '<=', $request->price);
-    //     }
-
-    //     if ($request->fabric_color) {
-    //         $query->whereHas('itemDetail', function ($q) use ($request) {
-    //             $q->where('fabric_color', 'like', '%' . $request->fabric_color . '%');
-    //         });
-    //     }
-
-    //     if ($request->fabric_name) {
-    //         $query->whereHas('itemDetail.fabric', function ($q) use ($request) {
-    //             $q->where('name', 'like', '%' . $request->fabric_name . '%');
-    //         });
-    //     }
-
-    //     if ($request->wood_name) {
-    //         $query->whereHas('itemDetail.wood', function ($q) use ($request) {
-    //             $q->where('name', 'like', '%' . $request->wood_name . '%');
-    //         });
-    //     }
-
-    //     $items = $query->get();
-
-    //     $itemsFormatted = $items->map(function ($item) {
-    //         return [
-    //             'id' => $item->id,
-    //             'room_id' => $item->room_id,
-    //             'name' => $item->name,
-    //             'price' => $item->price,
-    //             'type' => $item->itemType->name ?? null,
-    //             'fabric_color' => $item->itemDetail->fabric_color ?? null,
-    //             'fabric_name' => $item->itemDetail->fabric->name ?? null,
-    //             'wood_name' => $item->itemDetail->wood->name ?? null,
-    //         ];
-    //     });
-
-    //     return response()->json([
-    //         'types' => $types->pluck('name'),
-    //         'items' => $itemsFormatted
-    //     ]);
-    // }
-
     public function filterItemsWithType(Request $request)
     {
         $request->validate([
@@ -2700,7 +2660,6 @@ class CustomerController extends Controller
             'price_max' => 'nullable|numeric',
         ]);
 
-        // جلب الأنواع المطابقة
         $types = ItemType::where('name', 'like', '%' . $request->type_name . '%')->get();
 
         if ($types->isEmpty()) {
@@ -2955,5 +2914,24 @@ class CustomerController extends Controller
         ];
 
         return response()->json($response);
+    }
+
+
+
+    public function getOrdersByCustomer()
+    {
+        $customerId = auth()->user()->customer->id;
+
+        $customer = Customer::with(['purchaseOrders.item', 'purchaseOrders.roomOrders'])->find($customerId);
+
+
+        if (!$customer) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+
+        return response()->json([
+            'customer' => $customer->name,
+            'orders' => $customer->purchaseOrders,
+        ]);
     }
 }

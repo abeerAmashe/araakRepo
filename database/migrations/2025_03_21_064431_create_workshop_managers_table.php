@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('workshop_managers', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('branch_id')->nullable()->constrained('branchs')->cascadeOnDelete();
             $table->timestamps();
         });
     }

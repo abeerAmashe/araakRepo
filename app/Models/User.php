@@ -12,22 +12,21 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-   
+
     protected $fillable = [
         'id',
         'name',
         'email',
         'password',
-        // 'role'
     ];
 
-    
+
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    
+
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
@@ -68,5 +67,16 @@ class User extends Authenticatable
     public function favorites()
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    public function wallets()
+{
+    return $this->hasMany(Wallet::class);
+}
+
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
     }
 }
