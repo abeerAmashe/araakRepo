@@ -72,7 +72,7 @@ class CustomerController extends Controller
                     'description' => $room->description,
                     'image_url' => $room->image_url,
                     'like_count' => $room->likes_count,
-                    'average_rating' => round($room->ratings_avg_rate ?? 0, 2),
+                    'average_rating' => (float) round($room->ratings_avg_rate ?? 0, 2),
                     'items' => $room->items->map(function ($item) {
                         $itemDetail = $item->itemDetail->first();
                         $wood = $itemDetail ? Wood::find($itemDetail->wood_id) : null;
@@ -127,7 +127,7 @@ class CustomerController extends Controller
                         'price' => $room->price,
                         'image_url' => $room->image_url,
                         'likes_count' => $room->likes()->count(),
-                        'average_rating' => round($room->ratings()->avg('rate'), 1),
+                        'average_rating' => (float) round($room->ratings()->avg('rate'), 1),
                         'feedbacks' => $room->ratings->pluck('feedback')->filter()->values(),
                     ];
                 })
@@ -165,7 +165,7 @@ class CustomerController extends Controller
                         'wood_width' => optional($item->itemDetail)->wood_width,
                         'wood_height' => optional($item->itemDetail)->wood_height,
                         'likes_count' => $item->likes->count(),
-                        'average_rating' => round($item->ratings->avg('rate'), 1),
+                        'average_rating' => (float) round($item->ratings->avg('rate'), 1),
                         'feedbacks' => $item->ratings->pluck('feedback')->filter()->values()
                     ];
                 })
@@ -235,13 +235,13 @@ class CustomerController extends Controller
 
         $rooms = $rooms->map(function ($room) {
             $room->likes_count = $room->likes()->count();
-            $room->total_rating = round($room->ratings()->avg('rate') ?? 0, 1);
+            $room->total_rating = (float)round($room->ratings()->avg('rate') ?? 0, 1);
 
             if ($room->relationLoaded('items')) {
                 $room->items = $room->items->map(function ($item) {
                     $item->is_favorite = true;
                     $item->likes_count = $item->likes()->count();
-                    $item->total_rating = round($item->ratings()->avg('rate') ?? 0, 1);
+                    $item->total_rating = (float)round($item->ratings()->avg('rate') ?? 0, 1);
                     return $item;
                 });
             }
@@ -252,7 +252,7 @@ class CustomerController extends Controller
         $items = $items->map(function ($item) {
             $item->is_favorite = true;
             $item->likes_count = $item->likes()->count();
-            $item->total_rating = round($item->ratings()->avg('rate') ?? 0, 1);
+            $item->total_rating = (float)round($item->ratings()->avg('rate') ?? 0, 1);
             return $item;
         });
 
@@ -892,7 +892,7 @@ class CustomerController extends Controller
             ->map(function ($item) {
                 $data = $item->toArray();
                 $data['category_id'] = $item->room->category_id ?? null;
-                $data['average_rating'] = round($item->ratings_avg_rate, 2);
+                $data['average_rating'] = (float) round($item->ratings_avg_rate, 2);
 
                 if (isset($data['room']['price'])) {
                     $data['room']['price'] = floatval($data['room']['price']);
@@ -908,7 +908,7 @@ class CustomerController extends Controller
             ->map(function ($room) {
                 $data = $room->toArray();
                 $data['category_id'] = $room->category_id;
-                $data['average_rating'] = round($room->ratings_avg_rate, 2);
+                $data['average_rating'] = (float) round($room->ratings_avg_rate, 2);
                 if (isset($data['price'])) {
                     $data['price'] = floatval($data['price']);
                 }
@@ -1202,12 +1202,12 @@ class CustomerController extends Controller
             return [
                 'customer_name' => $rating->customer?->user?->name,
                 'customer_image' => $rating->customer?->profile_image,
-                'rate' => $rating->rate,
+                'rate' => (float) $rating->rate,
                 'feedback' => $rating->feedback,
             ];
         });
 
-        $averageRating = $ratings->avg('rate');
+        $averageRating = (float) $ratings->avg('rate');
         $totalRate = $ratings->count();
 
         return response()->json([
@@ -1225,7 +1225,7 @@ class CustomerController extends Controller
                 'is_favorite' => $isFavorite,
                 'is_liked' => $isLiked,
                 'likes_count' => $room->likes()->count(),
-                'average_rating' => $averageRating,
+                'average_rating' => (float) $averageRating,
                 'total_rate' => $totalRate,
                 'items' => $room->items->map(fn($item) => [
                     'id' => $item->id,
@@ -1254,12 +1254,12 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Item not found']);
         }
 
-        $averageRating = $item->ratings()->avg('rate');
+        $averageRating = (float) $item->ratings()->avg('rate');
 
         $ratings = $item->ratings->map(function ($rating) {
             return [
                 'feedback' => $rating->feedback,
-                'rate' => $rating->rate,
+                'rate' => (float) $rating->rate,
                 'customer' => [
                     'id' => $rating->customer->id,
                     'name' => $rating->customer->name,
@@ -1303,7 +1303,7 @@ class CustomerController extends Controller
             ],
 
             'item_details' => $item->itemDetail,
-            'average_rating' => round($averageRating, 2),
+            'average_rating' => (float) round($averageRating, 2),
             'ratings' => $ratings,
             'is_liked' => $isLiked,
             'is_favorite' => $isFavorite,
@@ -1356,7 +1356,7 @@ class CustomerController extends Controller
             $rating = new Rating();
             $rating->customer_id = $customer->id;
             $rating->room_id = $room_id;
-            $rating->rate = $request->rate;
+            $rating->rate = (float)$request->rate;
             $rating->feedback = $request->feedback;
             $rating->save();
 
@@ -1384,7 +1384,7 @@ class CustomerController extends Controller
             $rating = new Rating();
             $rating->customer_id = $customer->id;
             $rating->item_id = $item_id;
-            $rating->rate = $request->rate;
+            $rating->rate = (float)$request->rate;
             $rating->feedback = $request->feedback;
             $rating->save();
 
@@ -2497,7 +2497,7 @@ class CustomerController extends Controller
 
         $itemsWithTypeName = $items->map(function ($item) {
             $likesCount = $item->likes->count();
-            $averageRating = $item->ratings->avg('rate');
+            $averageRating = (float) $item->ratings->avg('rate');
 
             return [
                 'id' => $item->id,
@@ -2513,7 +2513,7 @@ class CustomerController extends Controller
                 'updated_at' => $item->updated_at,
                 'type' => $item->itemType->name,
                 'likes_count' => $likesCount,
-                'total_rating' => $averageRating ?? 0.0,
+                'total_rating' => (float) $averageRating ?? 0.0,
             ];
         });
 
