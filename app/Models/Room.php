@@ -25,6 +25,10 @@ class Room extends Model
         'fabric_color'
     ];
 
+    protected $casts = [
+        'price' => 'float',
+    ];
+
     public function branch()
     {
         return $this->belongsTo(Branch::class);

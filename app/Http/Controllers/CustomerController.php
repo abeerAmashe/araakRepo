@@ -67,8 +67,8 @@ class CustomerController extends Controller
                 return [
                     'id' => $room->id,
                     'name' => $room->name,
-                    'time' => $room->items->sum('time'),
-                    'price' => $room->price,
+                    'time' => (float)$room->items->sum('time'),
+                    'price' => (float)$room->price,
                     'description' => $room->description,
                     'image_url' => $room->image_url,
                     'like_count' => $room->likes_count,
@@ -81,17 +81,17 @@ class CustomerController extends Controller
                         return [
                             'id' => $item->id,
                             'name' => $item->name,
-                            'time' => $item->time,
-                            'price' => $item->price,
+                            'time' => (float)$item->time,
+                            'price' => (float)$item->price,
                             'image_url' => $item->image_url,
                             'wood_id' => optional($wood)->id,
                             'wood_name' => optional($wood)->name,
                             'wood_color' => optional($wood)->color,
-                            'wood_price_per_meter' => optional($wood)->price_per_meter,
+                            'wood_price_per_meter' => (float)optional($wood)->price_per_meter,
                             'fabric_id' => optional($fabric)->id,
                             'fabric_name' => optional($fabric)->name,
                             'fabric_color' => optional($fabric)->color,
-                            'fabric_price_per_meter' => optional($fabric)->price_per_meter,
+                            'fabric_price_per_meter' => (float)optional($fabric)->price_per_meter,
                         ];
                     }),
                 ];
@@ -280,138 +280,6 @@ class CustomerController extends Controller
         return $isCustomized;
     }
 
-    // public function addToCart(Request $request)
-    // {
-    //     $request->validate([
-    //         'item_id' => 'nullable|integer|exists:items,id',
-    //         'room_id' => 'nullable|integer|exists:rooms,id',
-    //         'count' => 'nullable|integer|min:1',
-    //     ]);
-
-    //     if (empty($request->item_id) && empty($request->room_id)) {
-    //         return response()->json(['message' => '"room_id" or "item_id" one only'], 200);
-    //     }
-
-    //     if (!empty($request->item_id) && !empty($request->room_id)) {
-    //         return response()->json(['message' => 'should have "room_id" or "item_id"'], 200);
-    //     }
-
-    //     $user = auth()->user();
-
-    //     if (!$user || !$user->customer) {
-    //         return response()->json(['message' => 'login is required'], 200);
-    //     }
-
-    //     $totalPrice = 0;
-    //     $totalTime = 0;
-
-    //     if (!empty($request->item_id)) {
-    //         $item = Item::find($request->item_id);
-
-    //         if (!$item) {
-    //             return response()->json(['message' => 'item not found'], 200);
-    //         }
-
-    //         $existingCartItem = Cart::where('customer_id', $user->customer->id)
-    //             ->where('item_id', $item->id)
-    //             ->whereNull('room_id')
-    //             ->first();
-
-    //         if ($existingCartItem) {
-    //             $existingCartItem->count += $request->count;
-    //             $existingCartItem->price_per_item += $item->price * $request->count;
-    //             $existingCartItem->time_per_item += ($this->checkAvailableTime(new Request([
-    //                 'item_id' => $item->id,
-    //                 'count' => $request->count,
-    //             ]))->original['required_time']) / 24;
-    //             $existingCartItem->save();
-    //         } else {
-    //             $checkAvailableResponse = $this->checkAvailableTime(new Request([
-    //                 'item_id' => $item->id,
-    //                 'count' => $request->count ?? 1,
-    //             ]));
-
-    //             if ($checkAvailableResponse->getStatusCode() !== 200) {
-    //                 return $checkAvailableResponse;
-    //             }
-
-    //             $requiredTime = $checkAvailableResponse->original['required_time'];
-    //             $itemPrice = $item->price * ($request->count ?? 1);
-
-    //             Cart::create([
-    //                 'customer_id' => $user->customer->id,
-    //                 'item_id' => $item->id,
-    //                 'room_id' => null,
-    //                 'count' => $request->count ?? 1,
-    //                 'time_per_item' => $requiredTime / 24,
-    //                 'price_per_item' => $itemPrice,
-    //             ]);
-    //         }
-    //     }
-
-    //     if (!empty($request->room_id)) {
-    //         $room = Room::with('items')->find($request->room_id);
-
-    //         if (!$room) {
-    //             return response()->json(['message' => 'room not found'], 200);
-    //         }
-
-    //         $existingCartRoom = Cart::where('customer_id', $user->customer->id)
-    //             ->where('room_id', $room->id)
-    //             ->whereNull('item_id')
-    //             ->first();
-
-    //         $roomTotalPrice = 0;
-    //         $roomTotalTime = 0;
-
-    //         foreach ($room->items as $item) {
-    //             $checkAvailableResponse = $this->checkAvailableTime(new Request([
-    //                 'item_id' => $item->id,
-    //                 'count' => $request->count ?? 1,
-    //             ]));
-
-    //             if ($checkAvailableResponse->getStatusCode() !== 200) {
-    //                 continue;
-    //             }
-
-    //             $requiredTime = $checkAvailableResponse->original['required_time'];
-    //             $itemPrice = $item->price * ($request->count ?? 1);
-
-    //             $roomTotalPrice += $itemPrice;
-    //             $roomTotalTime += $requiredTime;
-    //         }
-
-    //         if ($existingCartRoom) {
-    //             $existingCartRoom->count += $request->count;
-    //             $existingCartRoom->price_per_item += $roomTotalPrice;
-    //             $existingCartRoom->time_per_item += $roomTotalTime / 24;
-    //             $existingCartRoom->save();
-    //         } else {
-    //             Cart::create([
-    //                 'customer_id' => $user->customer->id,
-    //                 'item_id' => null,
-    //                 'room_id' => $room->id,
-    //                 'count' => $request->count ?? 1,
-    //                 'time_per_item' => $roomTotalTime / 24,
-    //                 'price_per_item' => $roomTotalPrice,
-    //             ]);
-    //         }
-    //     }
-
-    //     $cartItems = Cart::where('customer_id', $user->customer->id)->get();
-
-    //     foreach ($cartItems as $cartItem) {
-    //         $totalPrice += $cartItem->price_per_item;
-    //         $totalTime = max($totalTime, $cartItem->time_per_item);
-    //     }
-
-    //     return response()->json([
-    //         'message' => 'Done ^_^',
-    //         'current_cart' => $cartItems,
-    //         'total_price' => $totalPrice,
-    //         'total_time' => $totalTime,
-    //     ], 201);
-    // }
 
     public function handleCustomizationResponse(Request $request, $itemId)
     {
@@ -923,7 +791,7 @@ class CustomerController extends Controller
             $isItemDiscount = $discount->item_id !== null;
 
             $model = $isRoomDiscount ? $discount->room : $discount->item;
-            $originalPrice = $model?->price ?? null;
+            $originalPrice = isset($model?->price) ? (float) $model->price : null;
             $imageUrl = $model?->image_url ?? null;
             $name = $model?->name ?? null;
 
@@ -935,11 +803,12 @@ class CustomerController extends Controller
                 'start_date' => $discount->start_date,
                 'end_date' => $discount->end_date,
                 'original_price' => $originalPrice,
-                'discounted_price' => $originalPrice
-                    ? round($originalPrice * (1 - $discount->discount_percentage / 100), 2)
+                'discounted_price' => $originalPrice !== null
+                    ? (float) round($originalPrice * (1 - $discount->discount_percentage / 100), 2)
                     : null,
+
                 'image_url' => $imageUrl,
-                'name' => $name, // أضفنا الاسم هنا
+                'name' => $name,
             ];
 
             if ($isRoomDiscount) {
@@ -1024,6 +893,10 @@ class CustomerController extends Controller
                 $data = $item->toArray();
                 $data['category_id'] = $item->room->category_id ?? null;
                 $data['average_rating'] = round($item->ratings_avg_rate, 2);
+
+                if (isset($data['room']['price'])) {
+                    $data['room']['price'] = floatval($data['room']['price']);
+                }
                 return $data;
             });
 
@@ -1036,6 +909,10 @@ class CustomerController extends Controller
                 $data = $room->toArray();
                 $data['category_id'] = $room->category_id;
                 $data['average_rating'] = round($room->ratings_avg_rate, 2);
+                if (isset($data['price'])) {
+                    $data['price'] = floatval($data['price']);
+                }
+
                 return $data;
             });
 
@@ -2134,11 +2011,9 @@ class CustomerController extends Controller
         $wallet = $user->wallets->first();
 
         if (!$wallet || $wallet->balance < $rabbon) {
-            // return $rabbon;
             return response()->json(['message' => 'Insufficient balance to pay the deposit (rabbon)'], 200);
         }
 
-        // خصم الرعبون من محفظة الزبون
         $wallet->balance -= $rabbon;
         $wallet->save();
 

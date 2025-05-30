@@ -16,6 +16,10 @@ class Fabric extends Model
         'item_fabric_id'
 
     ];
+    protected $casts = [
+        'price_per_meter' => 'float',
+    ];
+
 
     public function fabricType()
     {

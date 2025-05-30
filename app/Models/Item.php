@@ -26,6 +26,11 @@ class Item extends Model
 
     ];
 
+    protected $casts = [
+        'price' => 'float',
+    ];
+
+
     public function itemDetail()
     {
         return $this->hasMany(ItemDetail::class);

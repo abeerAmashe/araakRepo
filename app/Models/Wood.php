@@ -23,6 +23,11 @@ class Wood extends Model
 
     ];
 
+    protected $casts = [
+        'price_per_meter' => 'float',
+    ];
+
+
 
     public function rooms()
     {
