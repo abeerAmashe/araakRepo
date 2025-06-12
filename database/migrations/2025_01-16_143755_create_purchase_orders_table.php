@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
-            $table->enum('status', ['not_ready', 'ready', 'in_progress']);
+            $table->enum('status', ['pending', 'in_progress', 'complete', 'cancelled']);
             $table->enum('delivery_status', ['pending', 'negotiation', 'confirmed']);
             $table->enum('want_delivery', ['yes', 'no']);
             $table->enum('is_paid', ['pending', 'partial', 'paid'])->default('pending');

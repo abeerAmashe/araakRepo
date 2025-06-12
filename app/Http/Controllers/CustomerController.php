@@ -1944,31 +1944,40 @@ class CustomerController extends Controller
     }
 
     public function getDeliveryPrice(Request $request)
-    {
-        $request->validate([
-            'address'   => 'required|string',
-            'latitude'  => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+{
+    $request->validate([
+        'address'   => 'required|string',
+        'latitude'  => 'nullable|numeric',
+        'longitude' => 'nullable|numeric',
+    ]);
 
-        $deliveryPrice = 0;
+    $deliveryPrice = 0;
 
-        $placeCost = PlaceCost::where('place', $request->input('address'))->first();
+    $placeCost = PlaceCost::where('place', $request->input('address'))->first();
 
-        if ($placeCost) {
-            $deliveryPrice = $placeCost->price;
-        } else {
-            return response()->json([
-                'message' => 'Delivery price not found for the given address.',
-                'delivery_price' => null
-            ], 404);
-        }
-
+    if (!$placeCost) {
         return response()->json([
-            'message' => 'Delivery price retrieved successfully.',
-            'delivery_price' => $deliveryPrice
-        ]);
+            'message' => 'Delivery price not found for the given address.',
+            'delivery_price' => null
+        ], 404);
     }
+
+    $deliveryPrice = $placeCost->price;
+
+    $customerId = auth()->user()->customer->id;
+    $cartItems = \App\Models\Cart::where('customer_id', $customerId)->get();
+
+    $totalCartPrice = $cartItems->sum('price');  
+
+    $totalWithDelivery = $totalCartPrice + $deliveryPrice;
+
+    return response()->json([
+        'message' => 'Delivery price and total price with delivery retrieved successfully.',
+        'delivery_price' => round($deliveryPrice, 2),
+        'total_price_with_delivery' => round($totalWithDelivery, 2)
+    ]);
+}
+
 
 
     public function confirmCart(Request $request)
