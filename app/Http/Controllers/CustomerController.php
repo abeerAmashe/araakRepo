@@ -2818,4 +2818,27 @@ class CustomerController extends Controller
             'orders' => $customer->purchaseOrders,
         ]);
     }
+
+
+
+    public function getUserBalance()
+{
+    $user = auth()->user();
+
+    $wallet = $user->wallets->where('is_active', true)->first();
+
+    if (!$wallet) {
+        return response()->json([
+            'message' => 'No active wallet found for this user.',
+            'balance' => 0
+        ]);
+    }
+
+    return response()->json([
+        'message' => 'Wallet balance retrieved successfully.',
+        'balance' => $wallet->balance,
+        'currency' => $wallet->currency,
+    ]);
+}
+
 }

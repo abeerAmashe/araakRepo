@@ -142,4 +142,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/getDeliveryPrice',[CustomerController::class,'getDeliveryPrice']);
     Route::post('/ChargeInvestmentWallet', [CustomerController::class, 'ChargeInvestmentWallet']);
     Route::get('/getOrdersByCustomer',[CustomerController::class,'getOrdersByCustomer']);
+    Route::get('/wallet_balance', [CustomerController::class, 'getUserBalance']);
+
 });
