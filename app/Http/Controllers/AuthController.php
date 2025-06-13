@@ -56,7 +56,6 @@ class AuthController extends Controller
         Customer::create([
             'user_id' => $user->id,
             'address' => '',
-            'phone_number' => '',
             'profile_image' => $profileImageUrl,
             'phone_number' => $request->phone_number,
         ]);
