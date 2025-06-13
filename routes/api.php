@@ -126,6 +126,8 @@ Route::get('/discount/{id}', [CustomerController::class, 'showDiscountDetails'])
 //----Auth
 Route::post('/signup', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
 
 
 
