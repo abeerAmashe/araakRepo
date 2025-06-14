@@ -33,8 +33,6 @@ class AuthController extends Controller
         $input = $request->only(['name', 'email', 'password']);
         $input['password'] = Hash::make($input['password']);
         $user = User::create($input);
-
-
         $user->wallets()->create([
             'balance' => 0.00,
             'currency' => 'usd',
@@ -68,9 +66,6 @@ class AuthController extends Controller
             'token' => $token,
         ], 200);
     }
-
-
-
     public function login(Request $request)
     {
         $user = User::where('email', $request->email)->first();
@@ -81,8 +76,6 @@ class AuthController extends Controller
         $token = $user->createToken('Personal Token');
         return response()->json(['token' => $token->plainTextToken, 'user' => $user]);
     }
-
-
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();
