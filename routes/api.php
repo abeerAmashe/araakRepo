@@ -126,7 +126,7 @@ Route::get('/discount/{id}', [CustomerController::class, 'showDiscountDetails'])
 //----Auth
 Route::post('/signup', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 
 
 Route::get('/searchItemsByTypeName', [CustomerController::class, 'searchItemsByTypeName']);
@@ -139,9 +139,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cart_details', [CustomerController::class, 'getCartDetails']);
     Route::post('/addToCartFavorite', [CustomerController::class, 'addToCartFavorite']);
     Route::post('/nearest-branch', [CustomerController::class, 'getNearestBranch']);
-    Route::post('/getDeliveryPrice',[CustomerController::class,'getDeliveryPrice']);
+    Route::post('/getDeliveryPrice', [CustomerController::class, 'getDeliveryPrice']);
     Route::post('/ChargeInvestmentWallet', [CustomerController::class, 'ChargeInvestmentWallet']);
-    Route::get('/getOrdersByCustomer',[CustomerController::class,'getOrdersByCustomer']);
+    Route::get('/getOrdersByCustomer', [CustomerController::class, 'getOrdersByCustomer']);
     Route::get('/wallet_balance', [CustomerController::class, 'getUserBalance']);
-
+    Route::get('/GetAllOrders', [CustomerController::class, 'getAllOrders']);
+    Route::get('/orders_details/{orderId}', [CustomerController::class, 'getOrderDetails']);
+    Route::post('/orders_cancel/{orderId}', [CustomerController::class, 'cancelOrder']);
 });

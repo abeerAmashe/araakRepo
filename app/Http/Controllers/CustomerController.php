@@ -1944,39 +1944,39 @@ class CustomerController extends Controller
     }
 
     public function getDeliveryPrice(Request $request)
-{
-    $request->validate([
-        'address'   => 'required|string',
-        'latitude'  => 'nullable|numeric',
-        'longitude' => 'nullable|numeric',
-    ]);
+    {
+        $request->validate([
+            'address'   => 'required|string',
+            'latitude'  => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
 
-    $deliveryPrice = 0;
+        $deliveryPrice = 0;
 
-    $placeCost = PlaceCost::where('place', $request->input('address'))->first();
+        $placeCost = PlaceCost::where('place', $request->input('address'))->first();
 
-    if (!$placeCost) {
+        if (!$placeCost) {
+            return response()->json([
+                'message' => 'Delivery price not found for the given address.',
+                'delivery_price' => null
+            ], 404);
+        }
+
+        $deliveryPrice = $placeCost->price;
+
+        $customerId = auth()->user()->customer->id;
+        $cartItems = \App\Models\Cart::where('customer_id', $customerId)->get();
+
+        $totalCartPrice = $cartItems->sum('price');
+
+        $totalWithDelivery = $totalCartPrice + $deliveryPrice;
+
         return response()->json([
-            'message' => 'Delivery price not found for the given address.',
-            'delivery_price' => null
-        ], 404);
+            'message' => 'Delivery price and total price with delivery retrieved successfully.',
+            'delivery_price' => round($deliveryPrice, 2),
+            'total_price_with_delivery' => round($totalWithDelivery, 2)
+        ]);
     }
-
-    $deliveryPrice = $placeCost->price;
-
-    $customerId = auth()->user()->customer->id;
-    $cartItems = \App\Models\Cart::where('customer_id', $customerId)->get();
-
-    $totalCartPrice = $cartItems->sum('price');  
-
-    $totalWithDelivery = $totalCartPrice + $deliveryPrice;
-
-    return response()->json([
-        'message' => 'Delivery price and total price with delivery retrieved successfully.',
-        'delivery_price' => round($deliveryPrice, 2),
-        'total_price_with_delivery' => round($totalWithDelivery, 2)
-    ]);
-}
 
 
 
@@ -2822,23 +2822,128 @@ class CustomerController extends Controller
 
 
     public function getUserBalance()
-{
-    $user = auth()->user();
+    {
+        $user = auth()->user();
 
-    $wallet = $user->wallets->where('is_active', true)->first();
+        $wallet = $user->wallets->where('is_active', true)->first();
 
-    if (!$wallet) {
+        if (!$wallet) {
+            return response()->json([
+                'message' => 'No active wallet found for this user.',
+                'balance' => 0
+            ]);
+        }
+
         return response()->json([
-            'message' => 'No active wallet found for this user.',
-            'balance' => 0
+            'message' => 'Wallet balance retrieved successfully.',
+            'balance' => $wallet->balance,
+            'currency' => $wallet->currency,
         ]);
     }
 
+    public function getAllOrders()
+    {
+        $orders = PurchaseOrder::select('id', 'status', 'recive_date', 'remaining_amount_with_delivery')
+            ->get()
+            ->map(function ($order) {
+                $remainingTime = '00:00';
+
+                if ($order->recive_date) {
+                    $now = Carbon::now()->startOfDay();
+                    $reciveDate = Carbon::parse($order->recive_date)->startOfDay();
+
+                    if ($reciveDate->greaterThan($now)) {
+                        $diffInDays = $now->diffInDays($reciveDate);
+                        $remainingTime = sprintf('%02d:00', $diffInDays * 24); // عدد الساعات المتبقية (أيام * 24)
+                    }
+                }
+
+                return [
+                    'id' => $order->id,
+                    'status' => $order->status,
+                    'remaining_time' => $remainingTime,
+                    'remaining_bill' => number_format($order->remaining_amount_with_delivery, 2) . ' $',
+                ];
+            });
+
+        return response()->json([
+            'message' => 'Orders retrieved successfully.',
+            'orders' => $orders,
+        ]);
+    }
+
+
+
+   public function getOrderDetails($orderId)
+{
+    $order = PurchaseOrder::with(['roomOrders.room', 'item'])->find($orderId);
+
+    if (!$order) {
+        return response()->json([
+            'message' => 'Order not found.',
+        ], 404);
+    }
+
+    $remainingTime = '00:00';
+    if ($order->recive_date) {
+        $now = Carbon::now()->startOfDay();
+        $reciveDate = Carbon::parse($order->recive_date)->startOfDay();
+
+        if ($reciveDate->greaterThan($now)) {
+            $diffInDays = $now->diffInDays($reciveDate);
+            $remainingTime = sprintf('%02d:00', $diffInDays * 24);
+        }
+    }
+
+    $rooms = $order->roomOrders->map(function ($roomOrder) {
+        return [
+            'room_id'    => $roomOrder->room->id ?? null,
+            'room_name'  => $roomOrder->room->name ?? null,
+            'room_img'   => $roomOrder->room->image ?? null,
+            'room_price' => $roomOrder->room->price ?? null,
+        ];
+    });
+
+    $items = $order->item->map(function ($item) {
+        $depositAmount = $item->price * 0.5;
+
+        return [
+            'item_id'        => $item->id,
+            'item_name'      => $item->name,
+            'item_image'     => $item->image_url,
+            'item_price'     => $item->price,
+            'count_ordered'  => $item->pivot->count ?? 0,
+            'deposite_price' => number_format($depositAmount, 2), // 50% من السعر
+        ];
+    });
+
     return response()->json([
-        'message' => 'Wallet balance retrieved successfully.',
-        'balance' => $wallet->balance,
-        'currency' => $wallet->currency,
+        'message' => 'Order details retrieved successfully.',
+        'id' => $order->id,
+        'status' => $order->status,
+        'remaining_time' => $remainingTime,
+        'remaining_bill' => number_format($order->remaining_amount_with_delivery, 2) . ' $',
+        'rooms_ordered' => $rooms,
+        'items_ordered' => $items,
     ]);
 }
+
+
+
+public function cancelOrder($orderId)
+{
+    $order = PurchaseOrder::find($orderId);
+
+    if (!$order) {
+        return response()->json(['error' => 'Order not found'], 404);
+    }
+
+    $order->status = 'cancelled';
+    $order->save();
+
+    return response()->json(['message' => 'Order cancelled successfully']);
+}
+
+
 
 }

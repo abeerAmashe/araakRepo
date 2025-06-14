@@ -50,9 +50,9 @@ class PurchaseOrder extends Model
     {
         return $this->belongsToMany(Item::class, 'item_orders', 'purchase_order_id', 'item_id')->withPivot(
             'count',
-            'deposite_price',
-            'deposite_time',
-            'delivery_time',
+            // 'deposite_price',
+            // 'deposite_time',
+            // 'delivery_time',
 
         );
     }
