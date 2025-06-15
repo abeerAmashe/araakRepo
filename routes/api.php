@@ -136,11 +136,6 @@ Route::get('/discount/{id}', [CustomerController::class, 'showDiscountDetails'])
 Route::post('/signup', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-<<<<<<< HEAD
-
-
-=======
->>>>>>> AliBranch
 
 
 Route::get('/searchItemsByTypeName', [CustomerController::class, 'searchItemsByTypeName']);

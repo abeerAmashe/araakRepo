@@ -79,21 +79,8 @@ class AuthController extends Controller
     {
         $request->user()->tokens()->delete();
 
-<<<<<<< HEAD
-
-    public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            'message' => 'Logged out successfully'
-        ]);
-    }
-}
-=======
         return response()->json([
             'message' => 'Logged out from all sessions'
         ]);
     }
 }
->>>>>>> AliBranch
