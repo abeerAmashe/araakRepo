@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('purchase_order_id')->constrained('purchase_orders')->cascadeOnDelete();  
             $table->integer('count');
             $table->float('price');
-            $table->time('time');
+            $table->integer('time');
             $table->timestamps();
         });
     }

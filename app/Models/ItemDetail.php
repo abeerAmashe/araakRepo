@@ -16,8 +16,7 @@ class ItemDetail extends Model
         'wood_length',
         'wood_width',
         'wood_height',
-        'fabric_dimension',
-       
+        'fabric_dimension',   
 
     ];
 
