@@ -75,7 +75,25 @@ class AuthController extends Controller
         $token = $user->createToken('Personal Token');
         return response()->json(['token' => $token->plainTextToken, 'user' => $user]);
     }
+    public function logout(Request $request)
+    {
+        $request->user()->tokens()->delete();
 
+<<<<<<< HEAD
 
-    //logout
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ]);
+    }
 }
+=======
+        return response()->json([
+            'message' => 'Logged out from all sessions'
+        ]);
+    }
+}
+>>>>>>> AliBranch
