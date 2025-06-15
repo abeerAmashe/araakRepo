@@ -11,8 +11,7 @@ class ItemFabric extends Model
 
     protected $table = 'item_fabric';
 
-    public $timestamps = false; // لأن المايجريشن ما حاط timestamps
-
+    public $timestamps = false; 
     protected $fillable = [
         'fabric_id',
         'item_detail_id'
