@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\GallaryManager;
 use App\Models\Item;
+use App\Models\PlaceCost;
 use App\Models\PurchaseOrder;
 use App\Models\Room;
 use App\Models\WorkshopManagerRequest;
@@ -93,6 +95,58 @@ class CartController extends Controller
             'total_price' => round($totalPrice, 2),
             'total_time' => $totalTime,
         ], 200);
+    }
+    private function validateCartReservations($customerId)
+    {
+        $cartItems = Cart::where('customer_id', $customerId)->get();
+        foreach ($cartItems as $cartItem) {
+            $elapsed = now()->diffInHours($cartItem->reserved_at);
+
+            if ($elapsed >= 24) {
+                if ($cartItem->item_id) {
+                    $item = Item::find($cartItem->item_id);
+                    if (!$item) continue;
+
+                    $available = $item->count - $item->count_reserved;
+                    $needed = $cartItem->count;
+
+                    if ($available >= $needed) {
+                        $cartItem->reserved_at = now();
+                        $cartItem->time = 0;
+                    } elseif ($available > 0) {
+                        $missing = $needed - $available;
+                        $cartItem->reserved_at = now();
+                        $cartItem->time = $missing * $item->time;
+                    } else {
+                        $cartItem->time = $needed * $item->time;
+                    }
+
+                    $cartItem->save();
+                } elseif ($cartItem->room_id) {
+                    $room = Room::with('items')->find($cartItem->room_id);
+                    if (!$room) continue;
+
+                    $totalMissingTime = 0;
+                    foreach ($room->items as $roomItem) {
+                        $available = $roomItem->count - $roomItem->count_reserved;
+                        $needed = $cartItem->count;
+
+                        if ($available >= $needed) {
+                            continue;
+                        } elseif ($available > 0) {
+                            $missing = $needed - $available;
+                            $totalMissingTime += $missing * $roomItem->time;
+                        } else {
+                            $totalMissingTime += $needed * $roomItem->time;
+                        }
+                    }
+
+                    $cartItem->reserved_at = now();
+                    $cartItem->time = $totalMissingTime;
+                    $cartItem->save();
+                }
+            }
+        }
     }
     public function addToCart2(Request $request)
     {
@@ -454,6 +508,78 @@ class CartController extends Controller
                 'remaining_amount_with_delivery'  => $remainingAmountWithDelivery,
             ],
             'nearest_branch' => $nearestBranch,
+        ]);
+    }
+
+    //from HelperController
+     public function getNearestBranch(Request $request)
+    {
+        $userLat = $request->input('latitude');
+        $userLng = $request->input('longitude');
+
+        if (!$userLat || !$userLng) {
+            return response()->json(['message' => 'Latitude and longitude are required.'], 422);
+        }
+
+        $nearestBranch = Branch::selectRaw("*, 
+        (6371 * acos(cos(radians(?)) * cos(radians(latitude)) 
+        * cos(radians(longitude) - radians(?)) 
+        + sin(radians(?)) * sin(radians(latitude)))) AS distance", [
+            $userLat,
+            $userLng,
+            $userLat
+        ])
+            ->orderBy('distance')
+            ->first();
+
+        if (!$nearestBranch) {
+            return response()->json(['message' => 'No branches found.'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Nearest branch retrieved successfully.',
+            'branch' => [
+                'id'          => $nearestBranch->id,
+                'address'     => $nearestBranch->address,
+                'latitude'    => $nearestBranch->latitude,
+                'longitude'   => $nearestBranch->longitude,
+                'distance_km' => round($nearestBranch->distance, 2),
+            ]
+        ]);
+    }
+
+    public function getDeliveryPrice(Request $request)
+    {
+        $request->validate([
+            'address'   => 'required|string',
+            'latitude'  => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        $deliveryPrice = 0;
+
+        $placeCost = PlaceCost::where('place', $request->input('address'))->first();
+
+        if (!$placeCost) {
+            return response()->json([
+                'message' => 'Delivery price not found for the given address.',
+                'delivery_price' => null
+            ], 404);
+        }
+
+        $deliveryPrice = $placeCost->price;
+
+        $customerId = auth()->user()->customer->id;
+        $cartItems = \App\Models\Cart::where('customer_id', $customerId)->get();
+
+        $totalCartPrice = $cartItems->sum('price');
+
+        $totalWithDelivery = $totalCartPrice + $deliveryPrice;
+
+        return response()->json([
+            'message' => 'Delivery price and total price with delivery retrieved successfully.',
+            'delivery_price' => round($deliveryPrice, 2),
+            'total_price_with_delivery' => round($totalWithDelivery, 2)
         ]);
     }
 }

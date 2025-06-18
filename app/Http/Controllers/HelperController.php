@@ -117,75 +117,8 @@ class HelperController extends Controller
 
         return null;
     }
-    public function getNearestBranch(Request $request)
-    {
-        $userLat = $request->input('latitude');
-        $userLng = $request->input('longitude');
-
-        if (!$userLat || !$userLng) {
-            return response()->json(['message' => 'Latitude and longitude are required.'], 422);
-        }
-
-        $nearestBranch = Branch::selectRaw("*, 
-        (6371 * acos(cos(radians(?)) * cos(radians(latitude)) 
-        * cos(radians(longitude) - radians(?)) 
-        + sin(radians(?)) * sin(radians(latitude)))) AS distance", [
-            $userLat,
-            $userLng,
-            $userLat
-        ])
-            ->orderBy('distance')
-            ->first();
-
-        if (!$nearestBranch) {
-            return response()->json(['message' => 'No branches found.'], 404);
-        }
-
-        return response()->json([
-            'message' => 'Nearest branch retrieved successfully.',
-            'branch' => [
-                'id'          => $nearestBranch->id,
-                'address'     => $nearestBranch->address,
-                'latitude'    => $nearestBranch->latitude,
-                'longitude'   => $nearestBranch->longitude,
-                'distance_km' => round($nearestBranch->distance, 2),
-            ]
-        ]);
-    }
-    public function getDeliveryPrice(Request $request)
-    {
-        $request->validate([
-            'address'   => 'required|string',
-            'latitude'  => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
-
-        $deliveryPrice = 0;
-
-        $placeCost = PlaceCost::where('place', $request->input('address'))->first();
-
-        if (!$placeCost) {
-            return response()->json([
-                'message' => 'Delivery price not found for the given address.',
-                'delivery_price' => null
-            ], 404);
-        }
-
-        $deliveryPrice = $placeCost->price;
-
-        $customerId = auth()->user()->customer->id;
-        $cartItems = \App\Models\Cart::where('customer_id', $customerId)->get();
-
-        $totalCartPrice = $cartItems->sum('price');
-
-        $totalWithDelivery = $totalCartPrice + $deliveryPrice;
-
-        return response()->json([
-            'message' => 'Delivery price and total price with delivery retrieved successfully.',
-            'delivery_price' => round($deliveryPrice, 2),
-            'total_price_with_delivery' => round($totalWithDelivery, 2)
-        ]);
-    }
+   
+    
     public function getExchangeRate($from, $to)
     {
         try {

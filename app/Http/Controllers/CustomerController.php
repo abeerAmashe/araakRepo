@@ -348,58 +348,7 @@ class CustomerController extends Controller
 
         return response()->json(['message' => 'Cart and reservations cleared']);
     }
-    private function validateCartReservations($customerId)
-    {
-        $cartItems = Cart::where('customer_id', $customerId)->get();
-        foreach ($cartItems as $cartItem) {
-            $elapsed = now()->diffInHours($cartItem->reserved_at);
-
-            if ($elapsed >= 24) {
-                if ($cartItem->item_id) {
-                    $item = Item::find($cartItem->item_id);
-                    if (!$item) continue;
-
-                    $available = $item->count - $item->count_reserved;
-                    $needed = $cartItem->count;
-
-                    if ($available >= $needed) {
-                        $cartItem->reserved_at = now();
-                        $cartItem->time = 0;
-                    } elseif ($available > 0) {
-                        $missing = $needed - $available;
-                        $cartItem->reserved_at = now();
-                        $cartItem->time = $missing * $item->time;
-                    } else {
-                        $cartItem->time = $needed * $item->time;
-                    }
-
-                    $cartItem->save();
-                } elseif ($cartItem->room_id) {
-                    $room = Room::with('items')->find($cartItem->room_id);
-                    if (!$room) continue;
-
-                    $totalMissingTime = 0;
-                    foreach ($room->items as $roomItem) {
-                        $available = $roomItem->count - $roomItem->count_reserved;
-                        $needed = $cartItem->count;
-
-                        if ($available >= $needed) {
-                            continue;
-                        } elseif ($available > 0) {
-                            $missing = $needed - $available;
-                            $totalMissingTime += $missing * $roomItem->time;
-                        } else {
-                            $totalMissingTime += $needed * $roomItem->time;
-                        }
-                    }
-
-                    $cartItem->reserved_at = now();
-                    $cartItem->time = $totalMissingTime;
-                    $cartItem->save();
-                }
-            }
-        }
-    }
+    
     public function getType()
     {
         $itemTypes = ItemType::all();
